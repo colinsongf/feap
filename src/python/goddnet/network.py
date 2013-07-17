@@ -1,14 +1,17 @@
 import numpy as np
-from scipy.sparse import lil_matrix
+from scipy import sparse
 
 import networkx as nx
+
+def tanh_deriv(x):
+    return 1-np.tanh(x)**2
 
 class Network(object):
     """
         Represents a layered artificial neural network.
     """
 
-    def __init__(self, shape, nonlinearity=np.tanh):
+    def __init__(self, shape, nonlinearity=np.tanh, nonlinearity_deriv=tanh_deriv):
         """
             Construct a Network instance.
 
@@ -22,6 +25,7 @@ class Network(object):
         self.num_layers = len(self.shape)
         self.num_inputs = self.shape[0]
         self.nonlinearity = nonlinearity
+        self.nonlinearity_deriv = nonlinearity_deriv
         self.compiled = False
 
         self.graph = self.create_graph(self.shape)
@@ -74,8 +78,16 @@ class Network(object):
             self.input2index[inode] = k
         self.input_indices = [self.node2index[n] for n in inodes] #the indices in the state vector corresponding to the input layer
 
+        #identify output nodes
+        onodes = [n for n in self.graph.nodes() if self.graph.node[n]['layer']==(self.num_layers-1)]
+        onodes.sort()
+        self.output2index=dict()
+        for k,onode in enumerate(onodes):
+            self.output2index[onode]=k
+        self.output_indices = [self.node2index[n] for n in onodes]
+
         #build weight matrix, element ij of the matrix is the weight from node j to node i
-        W = lil_matrix( (N, N), dtype='float')
+        W = sparse.lil_matrix( (N, N), dtype='float')
         for n1,n2 in self.graph.edges():
             j = self.node2index[n1]
             i = self.node2index[n2]
@@ -140,7 +152,42 @@ class Trainer(object):
             delta_W[(n1, n2)] = 0.0
         return delta_W
 
+class BackPropTrainer(Trainer):
 
+    def __init__(self, alpha):
+        Trainer.__init__(self)
+        self.alpha=alpha
+
+    def train(self, net, sample_input, target_output):
+        delta_W=self.get_updates(self, net, sample_input, target_output)
+        net.weights-=self.alpha*delta_W
+
+class OnlineBackPropTrainer(BackPropTrainer):
+
+    def __init__(self, alpha):
+        BackPropTrainer.__init__(self, alpha)
+
+    def train(self, net, sample_input, target_output):
+        net.step(input=sample_input)
+
+        layer_nodes = [n for n in net.graph.nodes() if net.graph.node[n]['layer']==(net.num_layers-1)]
+        prelayer_nodes = [n for n in net.graph.nodes() if net.graph.node[n]['layer']==(net.num_layers-2)]
+        layer_error=net.state[layer_nodes]-target_output
+        layer_delta=layer_error*net.nonlinearity_deriv(net.state[layer_nodes])
+        net.weights[:,net.output_indices]+=self.alpha*net.state[prelayer_nodes]*layer_delta
+
+        for k in range(net.num_layers-1):
+            layer=net.num_layers-k-1
+            prelayer_nodes = [n for n in net.graph.nodes() if net.graph.node[n]['layer'] == layer-1]
+            layer_nodes = [n for n in net.graph.nodes() if net.graph.node[n]['layer'] == layer]
+            layer_indices = [net.node2index(n) for n in layer_nodes]
+            layer_error=layer_delta*net.weights[layer_indices,:]
+            layer_delta=layer_error*net.nonlinearity_deriv(net.state[layer_nodes])
+            net.weights[:,layer_indices]+=self.alpha*net.state[prelayer_nodes]*layer_delta
+
+
+
+print(__name__)
 if __name__ == '__main__':
 
     #simple two layer net, with two neurons in input layer, one output neuron in the second layer
@@ -149,4 +196,13 @@ if __name__ == '__main__':
     conn = DenseFeedforwardConnector(random=True)
     conn.connect(net)
 
-    net.step(input=[0.25, -0.9])
+    #net.step(input=[0.25, -0.9])
+    trainer=OnlineBackPropTrainer(0.1)
+
+    in_examples=[[0,0],[0,1],[1,0],[1,1]]
+    out_examples=[0,1,1,0]
+
+    for i in range(100):
+        ex_idx=np.random.randint(0,high=len(out_examples))
+        trainer.train(net, in_examples[ex_idx], out_examples[ex_idx])
+
