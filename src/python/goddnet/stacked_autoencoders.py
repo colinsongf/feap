@@ -163,7 +163,7 @@ def test_train():
     net=StackedAutoencoderNetwork([[2,10,2],[10,5,10],[5,10,1]])
     trainer=StackedAutoencoderTrainer(learning_rate=0.1, momentum=0.0)
     trainer.init_train_sequence(net, init_patterns)
-    trainer.train(net, final_patterns)
+    trainer.train(net, final_patterns, err_thresh=.01)
 
 if __name__ == "__main__":
     #test_init_train()
