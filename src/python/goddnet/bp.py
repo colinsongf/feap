@@ -13,7 +13,7 @@ class FeedforwardNetwork():
     """
     Represents a feedforward neural network
     """
-    def __init__(self, shape, nonlinearity=np.tanh, nonlinearity_deriv=tanh_deriv):
+    def __init__(self, shape, nonlinearity=np.tanh, nonlinearity_deriv=tanh_deriv, init_weight_scale=.05):
         self.shape=shape
         self.nonlinearity=nonlinearity
         self.nonlinearity_deriv=nonlinearity_deriv
@@ -24,7 +24,7 @@ class FeedforwardNetwork():
         self.c=[]
         # Init weights and weight change
         for i in range(len(self.shape)-1):
-            self.weights.append(.05*np.random.randn(self.shape[i],self.shape[i+1]))
+            self.weights.append(init_weight_scale*np.random.randn(self.shape[i],self.shape[i+1]))
             self.c.append(np.zeros([self.shape[i],self.shape[i+1]]))
         # Init layer nodes
         self.node_activations=[]
@@ -72,41 +72,14 @@ class BackPropTrainer():
         self.error_deriv=error_deriv
 
     def train (self, net, patterns, max_iterations = 100000, err_thresh=.001):
-        """
-        Train on the given patterns
-        """
-        for i in range(max_iterations):
-            # total error over all patterns
-            total_error=0
-            for p in patterns:
-                inputs = p[0]
-                targets = p[1]
-
-                # Run network with pattern input
-                net.run(inputs)
-
-                # back propagate
-                (error,layer_deltas)=self.backPropagate(net, targets)
-
-                total_error +=error
-
-            if i % 50 == 0:
-                print 'Combined error', total_error
-
-            # Quit if converged
-            if i>0 and total_error<err_thresh:
-                break
-
-        # Test network
-        self.test(net, patterns)
+        pass
 
     def computeDelta(self, layer_deltas, weights, node_activations, d_nonlinearity):
         """
         Compute error and delta for layer the weights project to
         """
         delta_error = np.sum(weights * layer_deltas, axis=1)
-        layer_deltas = delta_error * d_nonlinearity(node_activations)
-        return layer_deltas
+        return delta_error * d_nonlinearity(node_activations)
 
     def adjustWeights(self, layer_deltas, node_activations, weights, c):
         """
@@ -115,32 +88,27 @@ class BackPropTrainer():
         change =  layer_deltas * node_activations
         weights += self.learning_rate * change + self.momentum * c
         c = change
-        return weights,c
 
-    def adjust_weights_to_outlayer(self, targets, outlayer, hiddenlayer, weights, c, d_nonlinearity):
+    def adjust_weights_to_outlayer(self, output_error, outlayer, hiddenlayer, weights, c, d_nonlinearity):
         """
         Adjust weights to the output layer of a network
         """
-        # Compute output layer error
-        output_error = self.error_deriv(targets, outlayer)
         # Compute output layer delta
         layer_deltas = output_error * d_nonlinearity(outlayer)
         # Modify weights to output layer
-        (weights, c) = self.adjustWeights(layer_deltas[np.newaxis, :], hiddenlayer, weights, c)
-        return layer_deltas,weights,c
+        self.adjustWeights(layer_deltas[np.newaxis, :], hiddenlayer, weights, c)
+        return layer_deltas
 
     def adjust_weights_to_hiddenlayer(self, layer_deltas, postlayer_weights, inputlayer, hiddenlayer, weights, c,
                                       d_nonlinearity):
         """
         Adjust weights to the hidden layer of a network
         """
-        layer_deltas = self.computeDelta(layer_deltas, postlayer_weights,
-            hiddenlayer, d_nonlinearity)
+        layer_deltas = self.computeDelta(layer_deltas, postlayer_weights, hiddenlayer, d_nonlinearity)
         # Compute change in weights
-        (weights, c) = self.adjustWeights(layer_deltas[np.newaxis, :],inputlayer, weights, c)
-        return layer_deltas,weights,c
+        self.adjustWeights(layer_deltas[np.newaxis, :],inputlayer, weights, c)
 
-    def backPropagate(self, net, targets):
+    def backPropagate(self, net, output_error):
         """
         Back propagate error
         """
@@ -148,8 +116,8 @@ class BackPropTrainer():
         # Adjust weights to output layer
         outlayer=net.node_activations[-1]
         hiddenlayer=net.node_activations[-2]
-        (layer_deltas,net.weights[-1],net.c[-1]) = self.adjust_weights_to_outlayer(targets, outlayer,
-            hiddenlayer[:, np.newaxis], net.weights[-1], net.c[-1], net.nonlinearity_deriv)
+        layer_deltas = self.adjust_weights_to_outlayer(output_error, outlayer,  hiddenlayer[:, np.newaxis],
+            net.weights[-1], net.c[-1], net.nonlinearity_deriv)
 
         # If more than two layer network, modify remaining weights, moving back a layer at a time (starting at weights
         # to hidden layer just before output layer)
@@ -162,12 +130,11 @@ class BackPropTrainer():
                 postlayer_weights=net.weights[weight_idx + 1]
                 inputlayer=net.node_activations[weight_idx]
                 hiddenlayer=net.node_activations[layer_idx]
-                (layer_deltas,net.weights[weight_idx], net.c[weight_idx])=self.adjust_weights_to_hiddenlayer(layer_deltas,
-                    postlayer_weights,inputlayer[:, np.newaxis], hiddenlayer, net.weights[weight_idx], net.c[weight_idx],
-                    net.nonlinearity_deriv)
+                self.adjust_weights_to_hiddenlayer(layer_deltas, postlayer_weights,inputlayer[:, np.newaxis],
+                    hiddenlayer, net.weights[weight_idx], net.c[weight_idx], net.nonlinearity_deriv)
 
         # calc combined error
-        return np.sum(self.error(targets,net.node_activations[-1])),layer_deltas
+        return layer_deltas
 
     def test(self, net, patterns):
         """
@@ -176,6 +143,37 @@ class BackPropTrainer():
         for p in patterns:
             inputs = p[0]
             print 'Inputs:', p[0], '-->', net.run(inputs), '\tTarget', p[1]
+
+    def train (self, net, patterns, max_iterations = 100000, err_thresh=.001):
+        """
+        Train on the given patterns
+        """
+        for i in range(max_iterations):
+            # total error over all patterns
+            total_error=0
+            for p in patterns:
+                inputs = p[0]
+                targets = p[1]
+
+                # Run network with pattern input
+                output=net.run(inputs)
+
+                # Compute output layer error
+                output_error = self.error_deriv(targets, output)
+                # back propagate
+                self.backPropagate(net, output_error)
+                total_error +=np.sum(self.error(targets,output))
+
+            if i % 50 == 0:
+                print 'Combined error', total_error
+
+            # Quit if converged
+            if i>0 and total_error<err_thresh:
+                break
+
+        # Test network
+        self.test(net, patterns)
+
 
 def test_xor():
     pat = [
@@ -203,5 +201,5 @@ def test_autoencode():
     myNN.print_weights()
 
 if __name__ == "__main__":
-    test_autoencode()
-    #test_xor()
+    #test_autoencode()
+    test_xor()
