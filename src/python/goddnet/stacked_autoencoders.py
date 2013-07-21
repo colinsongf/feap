@@ -56,6 +56,7 @@ class StackedAutoencoderTrainer(BackPropTrainer):
         """
         Initial training of autoencoders simultaneously on given patterns
         """
+        print('Training all autoencoders')
         for i in range(max_iterations):
             total_error=0
             for (in_pattern,out_pattern) in patterns:
@@ -78,6 +79,8 @@ class StackedAutoencoderTrainer(BackPropTrainer):
                 print 'Combined error', total_error
             if i>0 and total_error<.01:
                 break
+        # Test network
+        self.test(net, patterns)
 
     def init_train_sequence(self, net, patterns, max_iterations=1000):
         """
@@ -136,7 +139,7 @@ def test_run():
     print(net.run([0,1,0,1,1]))
     net.print_weights()
 
-def test_init_train():
+def test_init_train_simultaneous():
     input_patterns=[[0,0],[0,1],[1,0],[1,1]]
     patterns=[]
     for i in range(len(input_patterns)):
@@ -147,7 +150,18 @@ def test_init_train():
     net=StackedAutoencoderNetwork([[2,10,2],[10,20,10],[20,40,20]])
     trainer = StackedAutoencoderTrainer(learning_rate=0.05, momentum=0.0)
     trainer.init_train_simultaneous(net,patterns)
-    #trainer.init_train_sequence(net,patterns)
+
+def test_init_train_sequence():
+    input_patterns=[[0,0],[0,1],[1,0],[1,1]]
+    patterns=[]
+    for i in range(len(input_patterns)):
+        for j in range(50):
+            test_input=input_patterns[i]+.1*np.random.randn(len(input_patterns[i]))
+            test_output=input_patterns[i]
+            patterns.append([test_input,test_output])
+    net=StackedAutoencoderNetwork([[2,10,2],[10,20,10],[20,40,20]])
+    trainer = StackedAutoencoderTrainer(learning_rate=0.05, momentum=0.0)
+    trainer.init_train_sequence(net,patterns)
 
 def test_train():
     final_patterns=[[[0,0],[0]],
@@ -162,7 +176,8 @@ def test_train():
             init_patterns.append([in_pattern,out_pattern])
     net=StackedAutoencoderNetwork([[2,10,2],[10,5,10],[5,10,1]])
     trainer=StackedAutoencoderTrainer(learning_rate=0.1, momentum=0.0)
-    trainer.init_train_sequence(net, init_patterns)
+    #trainer.init_train_sequence(net, init_patterns)
+    trainer.init_train_simultaneous(net, init_patterns, max_iterations = 1000)
     trainer.train(net, final_patterns, err_thresh=.001)
 
 if __name__ == "__main__":
