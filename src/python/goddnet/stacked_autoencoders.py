@@ -1,4 +1,5 @@
 import numpy as np
+from mnist import MNIST
 from goddnet.bp import FeedforwardNetwork, BackPropTrainer, half_sq_error, half_sq_error_deriv
 
 class StackedAutoencoderNetwork():
@@ -59,57 +60,68 @@ class StackedAutoencoderTrainer(BackPropTrainer):
         BackPropTrainer.__init__(self, learning_rate=learning_rate, momentum=momentum, error=error,
             error_deriv=error_deriv)
 
-    def init_train_simultaneous(self, net, patterns, max_iterations = 10000, learning_rate=0.1, momentum=0.0,
-                                err_thresh=0.01):
+    def init_train_simultaneous(self, net, in_patterns, out_patterns, max_iterations = 10000, learning_rate=0.1,
+                                momentum=0.0, err_thresh=0.01):
         """
         Initial training of autoencoders simultaneously on given patterns
         """
         print('Training all autoencoders')
+        recent_error=np.zeros([100])
         for i in range(max_iterations):
-            total_error=0
-            for (in_pattern,out_pattern) in patterns:
-                pattern_err=0.0
-                for j in range(net.n_autoencoders-1):
-                    # Train autoencoder on pattern
-                    trainer=BackPropTrainer(learning_rate=learning_rate, momentum=momentum)
-                    # Run autoencoder with pattern
-                    net.autoencoders[j].run(in_pattern)
-                    # Train
-                    output_error = trainer.error_deriv(out_pattern, net.autoencoders[j].node_activations[-1])
-                    layer_deltas = trainer.backPropagate(net.autoencoders[j], output_error)
-                    pattern_err+=np.sum(self.error(out_pattern,net.autoencoders[j].node_activations[-1]))/(net.n_autoencoders-1.0)
-                    # Run again to get activity with new weights
-                    net.autoencoders[j].run(in_pattern)
-                    # Use hidden layer activity and corrupted copy as training for next autoencoder
-                    in_pattern=net.autoencoders[j].node_activations[1]
-                    out_pattern=in_pattern+.1*np.random.randn(len(in_pattern))
-                total_error+=pattern_err
-            if i % 50 == 0:
-                print 'Combined error', total_error
-            if i>0 and total_error<err_thresh:
-                break
+            j=np.random.randint(0,high=len(in_patterns))
+            in_pattern=in_patterns[j]
+            out_pattern=out_patterns[j]
+            pattern_err=0.0
+            for k in range(net.n_autoencoders-1):
+                # Train autoencoder on pattern
+                trainer=BackPropTrainer(learning_rate=learning_rate, momentum=momentum)
+                # Run autoencoder with pattern
+                net.autoencoders[k].run(in_pattern)
+                # Train
+                output_error = trainer.error_deriv(out_pattern, net.autoencoders[k].node_activations[-1])
+                trainer.backPropagate(net.autoencoders[k], output_error)
+                pattern_err+=np.sum(self.error(out_pattern,net.autoencoders[k].node_activations[-1]))/(net.n_autoencoders-1.0)
+                # Run again to get activity with new weights
+                net.autoencoders[k].run(in_pattern)
+                # Use hidden layer activity and corrupted copy as training for next autoencoder
+                in_pattern=net.autoencoders[k].node_activations[1]
+                out_pattern=in_pattern+.1*np.random.randn(len(in_pattern))
+            recent_error[0:-1]=recent_error[1:]
+            recent_error[-1]=pattern_err
+            if i>=100:
+                total_error=np.sum(recent_error)
+                if i % 50 == 0:
+                    print 'Combined error', total_error
+                if i>0 and total_error<err_thresh:
+                    break
         # Test network
-        self.test(net, patterns)
+        self.test(net, in_patterns, out_patterns)
 
-    def init_train_sequence(self, net, patterns, max_iterations=1000, learning_rate=0.025, momentum=0.0,
+    def init_train_sequence(self, net, in_patterns, out_patterns, max_iterations=100000, learning_rate=0.025, momentum=0.0,
                             err_thresh=0.01):
         """
         Initial training of autoencoders in sequence
         """
-        train_patterns=patterns
+        train_in_patterns=in_patterns
+        train_out_patterns=out_patterns
+        eta=learning_rate
         for j in range(net.n_autoencoders-1):
             print('Training Autoencoder %d' % j)
             # Train autoencoder
-            trainer=BackPropTrainer(learning_rate=learning_rate, momentum=momentum)
-            trainer.train(net.autoencoders[j], train_patterns, max_iterations=max_iterations, err_thresh=err_thresh)
-            train_patterns=[]
+            trainer=BackPropTrainer(learning_rate=eta, momentum=momentum)
+            trainer.train(net.autoencoders[j], train_in_patterns, train_out_patterns, max_iterations=max_iterations,
+                err_thresh=err_thresh)
+            train_in_patterns=[]
+            train_out_patterns=[]
             # Create patterns to train next autoencoder
-            for i in range(len(patterns)):
-                in_pattern=patterns[i][0]
+            for i in range(len(in_patterns)):
+                in_pattern=in_patterns[i]
                 net.run(in_pattern)
-                new_in_pattern=net.autoencoders[j].node_activations[1]
-                new_out_pattern=new_in_pattern+.1*np.random.randn(len(new_in_pattern))
-                train_patterns.append([new_in_pattern,new_out_pattern])
+                new_out_pattern=net.autoencoders[j].node_activations[1]
+                new_in_pattern=new_out_pattern+.1*np.random.randn(len(new_out_pattern))
+                train_in_patterns.append(new_in_pattern)
+                train_out_patterns.append(new_out_pattern)
+            eta=eta/2.0
 
     def backPropagate(self, net, output_error):
         """
@@ -148,45 +160,70 @@ def test_run():
 
 def test_init_train_simultaneous():
     input_patterns=[[0,0],[0,1],[1,0],[1,1]]
-    patterns=[]
+    in_patterns=[]
+    out_patterns=[]
     for i in range(len(input_patterns)):
         for j in range(50):
-            test_input=input_patterns[i]+.1*np.random.randn(len(input_patterns[i]))
-            test_output=input_patterns[i]
-            patterns.append([test_input,test_output])
+            in_patterns.append(input_patterns[i]+.1*np.random.randn(len(input_patterns[i])))
+            out_patterns.append(input_patterns[i])
     net=StackedAutoencoderNetwork([[2,10,2],[10,20,10],[20,40,20]])
-    trainer = StackedAutoencoderTrainer(learning_rate=0.05, momentum=0.0)
-    trainer.init_train_simultaneous(net,patterns)
+    trainer = StackedAutoencoderTrainer()
+    trainer.init_train_simultaneous(net,in_patterns,out_patterns,learning_rate=0.03, momentum=0.0,err_thresh=0.001,max_iterations=100000)
 
 def test_init_train_sequence():
     input_patterns=[[0,0],[0,1],[1,0],[1,1]]
-    patterns=[]
+    in_patterns=[]
+    out_patterns=[]
     for i in range(len(input_patterns)):
         for j in range(50):
-            test_input=input_patterns[i]+.1*np.random.randn(len(input_patterns[i]))
-            test_output=input_patterns[i]
-            patterns.append([test_input,test_output])
+            in_patterns.append(input_patterns[i]+.1*np.random.randn(len(input_patterns[i])))
+            out_patterns.append(input_patterns[i])
     net=StackedAutoencoderNetwork([[2,10,2],[10,20,10],[20,40,20]])
-    trainer = StackedAutoencoderTrainer(learning_rate=0.05, momentum=0.0)
-    trainer.init_train_sequence(net,patterns)
+    trainer = StackedAutoencoderTrainer()
+    trainer.init_train_sequence(net,in_patterns,out_patterns,learning_rate=0.1, momentum=0.0,err_thresh=0.001)
 
-def test_train():
-    final_patterns=[[[0,0],[0]],
-                    [[0,1],[1]],
-                    [[1,0],[1]],
-                    [[1,1],[0]]]
-    init_patterns=[]
-    for i in range(len(final_patterns)):
-        in_pattern=final_patterns[i][0]
+def test_train_xor():
+    final_in_pat = [[0,0],[0,1],[1,0],[1,1]]
+    final_out_pat = [[0],[1],[1],[0]]
+    init_in_patterns=[]
+    init_out_patterns=[]
+    for i in range(len(final_in_pat)):
+        out_pattern=final_in_pat[i]
         for j in range(20):
-            out_pattern=in_pattern+.1*np.random.randn(len(in_pattern))
-            init_patterns.append([in_pattern,out_pattern])
+            in_pattern=out_pattern+.1*np.random.randn(len(out_pattern))
+            init_in_patterns.append(in_pattern)
+            init_out_patterns.append(out_pattern)
     net=StackedAutoencoderNetwork([[2,10,2],[10,5,10],[5,10,1]])
-    trainer=StackedAutoencoderTrainer(learning_rate=0.1, momentum=0.0)
-    #trainer.init_train_sequence(net, init_patterns)
-    trainer.init_train_simultaneous(net, init_patterns, max_iterations = 1000)
-    trainer.train(net, final_patterns, err_thresh=.001)
+    trainer=StackedAutoencoderTrainer(learning_rate=0.05, momentum=0.0)
+    trainer.init_train_sequence(net, init_in_patterns, init_out_patterns, learning_rate=0.1, max_iterations=100000)
+    #trainer.init_train_simultaneous(net, init_in_patterns, init_out_patterns, learning_rate=0.01, max_iterations = 100000)
+    trainer.train(net, final_in_pat, final_out_pat, err_thresh=.001)
+
+def test_train_mnist(mnist_dir):
+    mndata = MNIST(mnist_dir)
+    (ims,labels)=mndata.load_training()
+    init_in_patterns=[]
+    init_out_patterns=[]
+    for i in range(len(ims)):
+        for j in range(10):
+            init_in_patterns.append(ims[i]+.01*np.random.randn(len(ims[i])))
+            init_out_patterns.append(ims[i])
+    net=StackedAutoencoderNetwork([[784,2000,784],[100,50,1]])
+    trainer=StackedAutoencoderTrainer(learning_rate=0.2, momentum=0.01)
+    trainer.init_train_sequence(net, init_in_patterns, init_out_patterns)
+    #trainer.init_train_simultaneous(net, init_in_patterns, init_out_patterns, max_iterations=1000)
+    trainer.train(net, ims, labels, err_thresh=.01)
+
+def test_train_mnist_simple(mnist_dir):
+    mndata = MNIST(mnist_dir)
+    (ims,labels)=mndata.load_training()
+    net=FeedforwardNetwork([784,500,1])
+    trainer=BackPropTrainer(learning_rate=0.1, momentum=0.0)
+    trainer.train(net, ims, labels, err_thresh=.01)
 
 if __name__ == "__main__":
-    #test_init_train()
-    test_train()
+    #test_init_train_sequence()
+    #test_init_train_simultaneous()
+    #test_train_xor()
+    test_train_mnist('/home/jbonaiuto/projects/eigenminds/goddnets/data/mnist')
+    #test_train_mnist_simple('/home/jbonaiuto/projects/eigenminds/goddnets/data/mnist')
