@@ -136,70 +136,62 @@ class BackPropTrainer():
         # calc combined error
         return layer_deltas
 
-    def test(self, net, patterns):
+    def test(self, net, in_patterns, out_patterns):
         """
         Test network on given patterns
         """
-        for p in patterns:
-            inputs = p[0]
-            print 'Inputs:', p[0], '-->', net.run(inputs), '\tTarget', p[1]
+        for i in range(len(in_patterns)):
+            inputs = in_patterns[i]
+            print 'Inputs:', inputs, '-->', net.run(inputs), '\tTarget', out_patterns[i]
 
-    def train (self, net, patterns, max_iterations = 100000, err_thresh=.001):
-        """
-        Train on the given patterns
-        """
+    def train(self, net, in_patterns, out_patterns, max_iterations = 100000, err_thresh=.0001):
+        recent_error=np.zeros([100])
         for i in range(max_iterations):
-            # total error over all patterns
-            total_error=0
-            for p in patterns:
-                inputs = p[0]
-                targets = p[1]
+            j=np.random.randint(0,high=len(in_patterns))
+            inputs=in_patterns[j]
+            targets=out_patterns[j]
+            # Run network with pattern input
+            output=net.run(inputs)
 
-                # Run network with pattern input
-                output=net.run(inputs)
+            # Compute output layer error
+            output_error = self.error_deriv(targets, output)
+            # back propagate
+            self.backPropagate(net, output_error)
+            pat_error =np.sum(self.error(targets,output))
+            recent_error[0:-1]=recent_error[1:]
+            recent_error[-1]=pat_error
+            if i>=100:
+                total_error=np.sum(recent_error)
+                if i % 50 == 0:
+                    print 'Combined error', total_error
 
-                # Compute output layer error
-                output_error = self.error_deriv(targets, output)
-                # back propagate
-                self.backPropagate(net, output_error)
-                total_error +=np.sum(self.error(targets,output))
-
-            if i % 50 == 0:
-                print 'Combined error', total_error
-
-            # Quit if converged
-            if i>0 and total_error<err_thresh:
-                break
-
+                # Quit if converged
+                if i>0 and total_error<err_thresh:
+                    break
         # Test network
-        self.test(net, patterns)
-
+        self.test(net, in_patterns, out_patterns)
 
 def test_xor():
-    pat = [
-        [[0,0], [0]],
-        [[0,1], [1]],
-        [[1,0], [1]],
-        [[1,1], [0]]
-    ]
+    in_pat = [[0,0],[0,1],[1,0],[1,1]]
+    out_pat = [[0],[1],[1],[0]]
     myNN = FeedforwardNetwork([2, 3, 2, 1])
     trainer = BackPropTrainer()
-    trainer.train(myNN,pat)
+    trainer.train(myNN,in_pat,out_pat)
     myNN.print_weights()
 
 def test_autoencode():
     input_patterns=[[0,0],[0,1],[1,0],[1,1]]
-    patterns=[]
+    in_patterns=[]
+    out_patterns=[]
     for i in range(len(input_patterns)):
         for j in range(50):
-            test_input=input_patterns[i]+.1*np.random.randn(len(input_patterns[i]))
-            test_output=input_patterns[i]
-            patterns.append([test_input,test_output])
+            in_patterns.append(input_patterns[i]+.1*np.random.randn(len(input_patterns[i])))
+            out_patterns.append(input_patterns[i])
     myNN=FeedforwardNetwork([2,10,2])
     trainer = BackPropTrainer(learning_rate=0.1, momentum=0.0)
-    trainer.train(myNN,patterns,err_thresh=0.01)
+    trainer.train(myNN,in_patterns,out_patterns,err_thresh=0.001)
     myNN.print_weights()
 
 if __name__ == "__main__":
-    #test_autoencode()
-    test_xor()
+    test_autoencode()
+    #test_xor()
