@@ -33,7 +33,7 @@ References:
                  Christopher M. Bishop, section 4.3.2
 
 """
-from theano.tensor.nnet import nnet
+from test_theano.tensor.nnet import nnet
 
 __docformat__ = 'restructedtext en'
 
@@ -45,18 +45,18 @@ import time
 
 import numpy
 
-import theano
-import theano.tensor as T
+import test_theano
+import test_theano.tensor as T
 
 class LinearRegression(object):
     def __init__(self, input, n_in, n_out):
         # initialize with 0 the weights W as a matrix of shape (n_in, n_out)
-        self.W = theano.shared(value=numpy.zeros((n_in, n_out),
-            dtype=theano.config.floatX),
+        self.W = test_theano.shared(value=numpy.zeros((n_in, n_out),
+            dtype=test_theano.config.floatX),
             name='W', borrow=True)
         # initialize the baises b as a vector of n_out 0s
-        self.b = theano.shared(value=numpy.zeros((n_out,),
-            dtype=theano.config.floatX),
+        self.b = test_theano.shared(value=numpy.zeros((n_out,),
+            dtype=test_theano.config.floatX),
             name='b', borrow=True)
 
         # compute prediction as class whose probability is maximal in
@@ -88,7 +88,7 @@ class LogisticRegression(object):
     def __init__(self, input, n_in, n_out):
         """ Initialize the parameters of the logistic regression
 
-        :type input: theano.tensor.TensorType
+        :type input: test_theano.tensor.TensorType
         :param input: symbolic variable that describes the input of the
                       architecture (one minibatch)
 
@@ -103,12 +103,12 @@ class LogisticRegression(object):
         """
 
         # initialize with 0 the weights W as a matrix of shape (n_in, n_out)
-        self.W = theano.shared(value=numpy.zeros((n_in, n_out),
-            dtype=theano.config.floatX),
+        self.W = test_theano.shared(value=numpy.zeros((n_in, n_out),
+            dtype=test_theano.config.floatX),
             name='W', borrow=True)
         # initialize the baises b as a vector of n_out 0s
-        self.b = theano.shared(value=numpy.zeros((n_out,),
-            dtype=theano.config.floatX),
+        self.b = test_theano.shared(value=numpy.zeros((n_out,),
+            dtype=test_theano.config.floatX),
             name='b', borrow=True)
 
         # compute vector of class-membership probabilities in symbolic form
@@ -131,7 +131,7 @@ class LogisticRegression(object):
             \frac{1}{|\mathcal{D}|} \sum_{i=0}^{|\mathcal{D}|} \log(P(Y=y^{(i)}|x^{(i)}, W,b)) \\
                 \ell (\theta=\{W,b\}, \mathcal{D})
 
-        :type y: theano.tensor.TensorType
+        :type y: test_theano.tensor.TensorType
         :param y: corresponds to a vector that gives for each example the
                   correct label
 
@@ -155,7 +155,7 @@ class LogisticRegression(object):
         over the total number of examples of the minibatch ; zero one
         loss over the size of the minibatch
 
-        :type y: theano.tensor.TensorType
+        :type y: test_theano.tensor.TensorType
         :param y: corresponds to a vector that gives for each example the
                   correct label
         """
@@ -203,11 +203,11 @@ def load_cifar10_data(dataset_dir):
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        shared_x = theano.shared(numpy.asarray(data_x,
-            dtype=theano.config.floatX),
+        shared_x = test_theano.shared(numpy.asarray(data_x,
+            dtype=test_theano.config.floatX),
             borrow=borrow)
-        shared_y = theano.shared(numpy.asarray(data_y,
-            dtype=theano.config.floatX),
+        shared_y = test_theano.shared(numpy.asarray(data_y,
+            dtype=test_theano.config.floatX),
             borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -271,11 +271,11 @@ def load_mnist_data(dataset):
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        shared_x = theano.shared(numpy.asarray(data_x,
-            dtype=theano.config.floatX),
+        shared_x = test_theano.shared(numpy.asarray(data_x,
+            dtype=test_theano.config.floatX),
             borrow=borrow)
-        shared_y = theano.shared(numpy.asarray(data_y,
-            dtype=theano.config.floatX),
+        shared_y = test_theano.shared(numpy.asarray(data_y,
+            dtype=test_theano.config.floatX),
             borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -352,13 +352,13 @@ def sgd_optimization_mnist(learning_rate=0.01, n_epochs=1000,
 
     # compiling a Theano function that computes the mistakes that are made by
     # the model on a minibatch
-    test_model = theano.function(inputs=[index],
+    test_model = test_theano.function(inputs=[index],
         outputs=classifier.errors(y),
         givens={
             x: test_set_x[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]})
 
-    validate_model = theano.function(inputs=[index],
+    validate_model = test_theano.function(inputs=[index],
         outputs=classifier.errors(y),
         givens={
             x: valid_set_x[index * batch_size:(index + 1) * batch_size],
@@ -376,7 +376,7 @@ def sgd_optimization_mnist(learning_rate=0.01, n_epochs=1000,
     # compiling a Theano function `train_model` that returns the cost, but in
     # the same time updates the parameter of the model based on the rules
     # defined in `updates`
-    train_model = theano.function(inputs=[index],
+    train_model = test_theano.function(inputs=[index],
         outputs=cost,
         updates=updates,
         givens={

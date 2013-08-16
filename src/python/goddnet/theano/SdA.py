@@ -37,9 +37,9 @@ import time
 
 import numpy
 
-import theano
-import theano.tensor as T
-from theano.tensor.shared_randomstreams import RandomStreams
+import test_theano
+import test_theano.tensor as T
+from test_theano.tensor.shared_randomstreams import RandomStreams
 
 from logistic_sgd import LogisticRegression, load_data
 from mlp import HiddenLayer
@@ -66,7 +66,7 @@ class SdA(object):
         :param numpy_rng: numpy random number generator used to draw initial
                     weights
 
-        :type theano_rng: theano.tensor.shared_randomstreams.RandomStreams
+        :type theano_rng: test_theano.tensor.shared_randomstreams.RandomStreams
         :param theano_rng: Theano random generator; if None is given one is
                            generated based on a seed drawn from `rng`
 
@@ -175,7 +175,7 @@ class SdA(object):
         a dA you just need to iterate, calling the corresponding function on
         all minibatch indexes.
 
-        :type train_set_x: theano.tensor.TensorType
+        :type train_set_x: test_theano.tensor.TensorType
         :param train_set_x: Shared variable that contains all datapoints used
                             for training the dA
 
@@ -204,9 +204,9 @@ class SdA(object):
             cost, updates = dA.get_cost_updates(corruption_level,
                                                 learning_rate)
             # compile the theano function
-            fn = theano.function(inputs=[index,
-                              theano.Param(corruption_level, default=0.2),
-                              theano.Param(learning_rate, default=0.1)],
+            fn = test_theano.function(inputs=[index,
+                              test_theano.Param(corruption_level, default=0.2),
+                              test_theano.Param(learning_rate, default=0.1)],
                                  outputs=cost,
                                  updates=updates,
                                  givens={self.x: train_set_x[batch_begin:
@@ -222,7 +222,7 @@ class SdA(object):
         a batch from the validation set, and a function `test` that
         computes the error on a batch from the testing set
 
-        :type datasets: list of pairs of theano.tensor.TensorType
+        :type datasets: list of pairs of test_theano.tensor.TensorType
         :param datasets: It is a list that contain all the datasets;
                          the has to contain three pairs, `train`,
                          `valid`, `test` in this order, where each pair
@@ -256,7 +256,7 @@ class SdA(object):
         for param, gparam in zip(self.params, gparams):
             updates.append((param, param - gparam * learning_rate))
 
-        train_fn = theano.function(inputs=[index],
+        train_fn = test_theano.function(inputs=[index],
               outputs=self.finetune_cost,
               updates=updates,
               givens={
@@ -266,7 +266,7 @@ class SdA(object):
                                     (index + 1) * batch_size]},
               name='train')
 
-        test_score_i = theano.function([index], self.errors,
+        test_score_i = test_theano.function([index], self.errors,
                  givens={
                    self.x: test_set_x[index * batch_size:
                                       (index + 1) * batch_size],
@@ -274,7 +274,7 @@ class SdA(object):
                                       (index + 1) * batch_size]},
                       name='test')
 
-        valid_score_i = theano.function([index], self.errors,
+        valid_score_i = test_theano.function([index], self.errors,
               givens={
                  self.x: valid_set_x[index * batch_size:
                                      (index + 1) * batch_size],

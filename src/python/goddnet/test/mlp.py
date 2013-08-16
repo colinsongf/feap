@@ -26,8 +26,8 @@ import time
 
 import numpy
 
-import theano
-import theano.tensor as T
+import test_theano
+import test_theano.tensor as T
 
 
 from goddnet.test.logistic_sgd import   load_cifar10_data
@@ -48,7 +48,7 @@ class HiddenLayer(object):
         :type rng: numpy.random.RandomState
         :param rng: a random number generator used to initialize weights
 
-        :type input: theano.tensor.dmatrix
+        :type input: test_theano.tensor.dmatrix
         :param input: a symbolic tensor of shape (n_examples, n_in)
 
         :type n_in: int
@@ -57,7 +57,7 @@ class HiddenLayer(object):
         :type n_out: int
         :param n_out: number of hidden units
 
-        :type activation: theano.Op or function
+        :type activation: test_theano.Op or function
         :param activation: Non linearity to be applied in the hidden
                            layer
         """
@@ -79,15 +79,15 @@ class HiddenLayer(object):
             W_values = numpy.asarray(rng.uniform(
                 low=-numpy.sqrt(6. / (n_in + n_out)),
                 high=numpy.sqrt(6. / (n_in + n_out)),
-                size=(n_in, n_out)), dtype=theano.config.floatX)
-            if activation == theano.tensor.nnet.sigmoid:
+                size=(n_in, n_out)), dtype=test_theano.config.floatX)
+            if activation == test_theano.tensor.nnet.sigmoid:
                 W_values *= 4
 
-            W = theano.shared(value=W_values, name='W', borrow=True)
+            W = test_theano.shared(value=W_values, name='W', borrow=True)
 
         if b is None:
-            b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)
-            b = theano.shared(value=b_values, name='b', borrow=True)
+            b_values = numpy.zeros((n_out,), dtype=test_theano.config.floatX)
+            b = test_theano.shared(value=b_values, name='b', borrow=True)
 
         self.W = W
         self.b = b
@@ -116,7 +116,7 @@ class MLP(object):
         :type rng: numpy.random.RandomState
         :param rng: a random number generator used to initialize weights
 
-        :type input: theano.tensor.TensorType
+        :type input: test_theano.tensor.TensorType
         :param input: symbolic variable that describes the input of the
         architecture (one minibatch)
 
@@ -246,13 +246,13 @@ def test_mlp(learning_rate=0.2, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
 
     # compiling a Theano function that computes the mistakes that are made
     # by the model on a minibatch
-    test_model = theano.function(inputs=[index],
+    test_model = test_theano.function(inputs=[index],
         outputs=classifier.errors(y),
         givens={
             x: test_set_x[index * batch_size:(index + 1) * batch_size],
             y: test_set_y[index * batch_size:(index + 1) * batch_size]})
 
-    validate_model = theano.function(inputs=[index],
+    validate_model = test_theano.function(inputs=[index],
         outputs=classifier.errors(y),
         givens={
             x: valid_set_x[index * batch_size:(index + 1) * batch_size],
@@ -278,7 +278,7 @@ def test_mlp(learning_rate=0.2, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     # compiling a Theano function `train_model` that returns the cost, but
     # in the same time updates the parameter of the model based on the rules
     # defined in `updates`
-    train_model = theano.function(inputs=[index], outputs=cost,
+    train_model = test_theano.function(inputs=[index], outputs=cost,
         updates=updates,
         givens={
             x: train_set_x[index * batch_size:(index + 1) * batch_size],
