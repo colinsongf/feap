@@ -90,7 +90,6 @@ class TestTheano(unittest.TestCase):
         final_state = state.get_value()
         assert np.abs(final_state).sum() < 1e-16
 
-
     def testRandom(self):
 
         #create an expression that returns a given gaussian random number with the specified mean and variance
@@ -109,6 +108,19 @@ class TestTheano(unittest.TestCase):
         #confirm that the mean and standard deviation are what one would expect
         assert np.abs(draws.mean() - real_mean) < 1e-2
         assert np.abs(draws.std(ddof=1) - real_std) < 1e-2
+
+    def testGrad(self):
+
+        x = T.dvector('x')
+        y = T.exp(x**2)
+        Jy = T.jacobian(y, x)
+
+        F = th.function([x], Jy)
+
+        F1 = F([0.5, 0.2])
+        print F1
+
+        assert 1 == 2
 
 
 if __name__ == '__main__':
