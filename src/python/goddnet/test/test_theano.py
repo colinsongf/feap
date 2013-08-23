@@ -6,6 +6,8 @@ import theano as th
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
+from goddnet.theano.utils import matrix_power
+
 
 class TestTheano(unittest.TestCase):
 
@@ -57,19 +59,6 @@ class TestTheano(unittest.TestCase):
         diff = np.abs(ZZ - ZZreal).sum()
         assert diff < 1e-6
 
-        #TODO: matrix power
-        """
-        k = T.iscalar('k')
-        mpfunc = matrix_power(X, k)
-        ZZ = mpfunc([[0.4, 0.6], [0.33, 0.67]], 1000)
-        ZZreal = np.array([[ 0.35483871, 0.64516129], [ 0.35483871,  0.64516129]])
-        print ZZ
-        print ZZreal
-        diff = np.abs(ZZ - ZZreal).sum()
-        print diff
-        assert diff < 1e-6
-        """
-
     def testShared(self):
 
         #create shared memory
@@ -112,15 +101,26 @@ class TestTheano(unittest.TestCase):
     def testGrad(self):
 
         x = T.dvector('x')
-        y = T.exp(x**2)
-        Jy = T.jacobian(y, x)
+        y = T.exp(T.sum(x**2))
+        gy = T.grad(y, x)
 
-        F = th.function([x], Jy)
+        f = th.function([x], gy)
 
-        F1 = F([0.5, 0.2])
-        print F1
+        f_real = th.function([x], 2*x*T.exp(T.sum(x**2)))
 
-        assert 1 == 2
+        f1 = f([0.5, 0.2])
+        f1real = f_real([0.5, 0.2])
+        diff = np.abs(f1 - f1real).sum()
+
+        assert diff == 0.0
+
+    def testScan(self):
+
+        A = [[1, 2], [3, 4]]
+        A4 = matrix_power(A, 4)
+        Anp = np.linalg.matrix_power(A, 4)
+        diff = np.abs(A4 - Anp).sum()
+        assert diff < 1e-6
 
 
 if __name__ == '__main__':
