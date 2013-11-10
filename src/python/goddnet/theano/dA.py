@@ -38,12 +38,12 @@ import time
 
 import numpy
 
-import test_theano
-import test_theano.tensor as T
-from test_theano.tensor.shared_randomstreams import RandomStreams
+import theano
+import theano.tensor as T
+from theano.tensor.shared_randomstreams import RandomStreams
+from goddnet.test.utils import tile_raster_images
 
 from logistic_sgd import load_data
-from utils import tile_raster_images
 
 import PIL.Image
 
@@ -90,11 +90,11 @@ class dA(object):
         :type numpy_rng: numpy.random.RandomState
         :param numpy_rng: number random generator used to generate weights
 
-        :type theano_rng: test_theano.tensor.shared_randomstreams.RandomStreams
+        :type theano_rng: theano.tensor.shared_randomstreams.RandomStreams
         :param theano_rng: Theano random generator; if None is given one is
                      generated based on a seed drawn from `rng`
 
-        :type input: test_theano.tensor.TensorType
+        :type input: theano.tensor.TensorType
         :param input: a symbolic description of the input or None for
                       standalone dA
 
@@ -104,17 +104,17 @@ class dA(object):
         :type n_hidden: int
         :param n_hidden:  number of hidden units
 
-        :type W: test_theano.tensor.TensorType
+        :type W: theano.tensor.TensorType
         :param W: Theano variable pointing to a set of weights that should be
                   shared belong the dA and another architecture; if dA should
                   be standalone set this to None
 
-        :type bhid: test_theano.tensor.TensorType
+        :type bhid: theano.tensor.TensorType
         :param bhid: Theano variable pointing to a set of biases values (for
                      hidden units) that should be shared belong dA and another
                      architecture; if dA should be standalone set this to None
 
-        :type bvis: test_theano.tensor.TensorType
+        :type bvis: theano.tensor.TensorType
         :param bvis: Theano variable pointing to a set of biases values (for
                      visible units) that should be shared belong dA and another
                      architecture; if dA should be standalone set this to None
@@ -138,17 +138,17 @@ class dA(object):
             initial_W = numpy.asarray(numpy_rng.uniform(
                       low=-4 * numpy.sqrt(6. / (n_hidden + n_visible)),
                       high=4 * numpy.sqrt(6. / (n_hidden + n_visible)),
-                      size=(n_visible, n_hidden)), dtype=test_theano.config.floatX)
-            W = test_theano.shared(value=initial_W, name='W', borrow=True)
+                      size=(n_visible, n_hidden)), dtype=theano.config.floatX)
+            W = theano.shared(value=initial_W, name='W', borrow=True)
 
         if not bvis:
-            bvis = test_theano.shared(value=numpy.zeros(n_visible,
-                                         dtype=test_theano.config.floatX),
+            bvis = theano.shared(value=numpy.zeros(n_visible,
+                                         dtype=theano.config.floatX),
                                  borrow=True)
 
         if not bhid:
-            bhid = test_theano.shared(value=numpy.zeros(n_hidden,
-                                                   dtype=test_theano.config.floatX),
+            bhid = theano.shared(value=numpy.zeros(n_hidden,
+                                                   dtype=theano.config.floatX),
                                  name='b',
                                  borrow=True)
 
@@ -194,7 +194,7 @@ class dA(object):
         """
         return  self.theano_rng.binomial(size=input.shape, n=1,
                                          p=1 - corruption_level,
-                                         dtype=test_theano.config.floatX) * input
+                                         dtype=theano.config.floatX) * input
 
     def get_hidden_values(self, input):
         """ Computes the values of the hidden layer """
@@ -237,7 +237,7 @@ class dA(object):
 
 
 def test_dA(learning_rate=0.1, training_epochs=15,
-            dataset='../data/mnist.pkl.gz',
+            dataset='/tmp/mnist.pkl.gz',
             batch_size=20, output_folder='dA_plots'):
 
     """
@@ -280,7 +280,7 @@ def test_dA(learning_rate=0.1, training_epochs=15,
     cost, updates = da.get_cost_updates(corruption_level=0.,
                                         learning_rate=learning_rate)
 
-    train_da = test_theano.function([index], cost, updates=updates,
+    train_da = theano.function([index], cost, updates=updates,
          givens={x: train_set_x[index * batch_size:
                                 (index + 1) * batch_size]})
 
@@ -325,7 +325,7 @@ def test_dA(learning_rate=0.1, training_epochs=15,
     cost, updates = da.get_cost_updates(corruption_level=0.3,
                                         learning_rate=learning_rate)
 
-    train_da = test_theano.function([index], cost, updates=updates,
+    train_da = theano.function([index], cost, updates=updates,
          givens={x: train_set_x[index * batch_size:
                                   (index + 1) * batch_size]})
 
@@ -362,4 +362,4 @@ def test_dA(learning_rate=0.1, training_epochs=15,
 
 
 if __name__ == '__main__':
-    test_dA()
+    test_dA(batch_size=5)
