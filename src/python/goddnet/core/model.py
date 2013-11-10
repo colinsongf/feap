@@ -2,13 +2,18 @@ import numpy
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
+from goddnet.theano.dA import dA
 from goddnet.theano.logistic_sgd import LogisticRegression
 from goddnet.theano.mlp import HiddenLayer
 
 
 class Model(object):
 
-    def train(self, data):
+    params=[]
+    def __init__(self):
+        pass
+
+    def train(self, data, learning_rate):
         raise NotImplementedError('Use a subclass')
 
     def predict(self, input):
@@ -17,12 +22,16 @@ class Model(object):
 
 class FeatureModel(Model):
 
+    is_unsupervised=True
+
     def __init__(self, numpy_rng, theano_rng=None, n_ins=784, hidden_layers_sizes=[500, 500], n_outs=10,
-                 corruption_levels=[0.1, 0.1]):
+                 corruption_levels=[0.1, 0.2]):
+
         self.sigmoid_layers = []
         self.dA_layers = []
         self.params = []
         self.n_layers = len(hidden_layers_sizes)
+        self.corruption_levels=corruption_levels
 
         assert self.n_layers > 0
 
@@ -109,25 +118,50 @@ class FeatureModel(Model):
 
         return pretrain_fns
 
-    def train(self, data, learning_rate):
-        train_set_x = theano.shared(numpy.asarray(data,
-                                                  dtype=theano.config.floatX),
-                                    borrow=True)
+    def train(self, data, learning_rate=0.001):
+        train_set_x = theano.shared(numpy.asarray(data, dtype=theano.config.floatX), borrow=True)
         pretraining_fns = self.pretraining_functions(train_set_x=train_set_x)
+        layer_c=[]
         for i in xrange(self.n_layers):
-            pretraining_fns[i](corruption=self.corruption_levels[i],
-                               lr=learning_rate)
+            layer_c.append(pretraining_fns[i](corruption=self.corruption_levels[i],
+                               lr=learning_rate))
+        return layer_c
 
     def transform(self, data):
         x=data
         for i in xrange(self.n_layers):
             y = self.dA_layers[i].get_hidden_values(x)
             x=y
-        return x
+        fn = theano.function(inputs=[],
+            outputs=x)
+        return fn()
 
 
-class PredictorModel(FeatureModel):
-    def train(self, data, learning_rate):
+class PredictorModel(Model):
+
+    y_pred=None
+    is_unsupervised=False
+
+    def get_updates(self, learning_rate):
+        # compute the gradients of the cost of the `dA` with respect
+        # to its parameters
+        gparams = T.grad(self.cost(), self.params)
+        # generate the list of updates
+        updates = []
+        for param, gparam in zip(self.params, gparams):
+            updates.append((param, param - learning_rate * gparam))
+        return updates
+
+    def cost(self):
+        pass
+
+    def errors(self, y):
+        # check if y has same dimension of y_pred
+        if y.ndim != self.y_pred.ndim:
+            raise TypeError('y should have the same shape as self.y_pred',
+                ('y', y.type, 'y_pred', self.y_pred.type))
+
+    def train(self, data, learning_rate=0.001):
         pass
 
     def predict(self, data):
