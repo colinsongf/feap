@@ -3,7 +3,8 @@ import numpy
 import theano
 import theano.tensor as T
 
-from goddnet.core.model import LogisticRegression,Model,PredictorModel
+from goddnet.core.model import PredictorModel
+from goddnet.models.regression import LogisticRegression
 
 
 class HiddenLayer(object):
@@ -82,13 +83,13 @@ class MLP(PredictorModel):
         self.L2_reg=L2_reg
 
         self.input=T.matrix('x')
-        self.y = T.lvector('y')
 
         self.hidden_layer = HiddenLayer(rng, self.input, in_size, hidden_size, activation=T.tanh)
 
         # The logistic regression layer gets as input the hidden units
         # of the hidden layer
-        self.output_layer = LogisticRegression(input=self.hidden_layer.output, n_in=hidden_size, n_out=out_size)
+        self.output_layer = LogisticRegression(hidden_size, out_size, input=self.hidden_layer.output)
+        self.y=self.output_layer.y
 
         # L1 norm ; one regularization option is to enforce L1 norm to
         # be small
@@ -123,7 +124,7 @@ class MLP(PredictorModel):
         # negative log likelihood of the MLP is given by the negative
         # log likelihood of the output of the model, computed in the
         # logistic regression layer
-        return self.output_layer.negative_log_likelihood(self.y) + self.L1_reg*self.L1 + self.L2_reg*self.L2_sqr
+        return self.output_layer.negative_log_likelihood() + self.L1_reg*self.L1 + self.L2_reg*self.L2_sqr
 
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
