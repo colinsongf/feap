@@ -12,7 +12,7 @@ class DenoisingAutoencoder(FeatureModel):
         super(DenoisingAutoencoder,self).__init__()
         self.is_unsupervised=True
         self.in_size = in_size
-        self.n_hidden = hidden_size
+        self.hidden_size = hidden_size
         self.corruption_level=corruption_level
 
         # create a Theano random generator that gives symbolic random values
