@@ -2,19 +2,21 @@ import numpy
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
-from goddnet.core.model import Model
+from goddnet.core.model import FeatureModel
 
-class dA(Model):
+class dA(FeatureModel):
     """
     Denoising autoencoder
     """
-    def __init__(self, in_size, hidden_size, numpy_rng, input=None, W=None, bhid=None, bvis=None):
-        super(Model,self).__init__()
+    def __init__(self, in_size, hidden_size, input=None, W=None, bhid=None, bvis=None, corruption_level=0.1):
+        super(dA,self).__init__()
         self.is_unsupervised=True
         self.in_size = in_size
         self.n_hidden = hidden_size
+        self.corruption_level=corruption_level
 
         # create a Theano random generator that gives symbolic random values
+        numpy_rng = numpy.random.RandomState(123)
         theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
 
         # note : W' was written as `W_prime` and b' as `b_prime`
@@ -63,21 +65,22 @@ class dA(Model):
         self.reconstructed=self.get_reconstructed_input(self.hidden)
 
         learning_rate = T.scalar('learning_rate')  # learning rate to use
-        corruption_level = T.scalar('corruption_level')  # learning rate to use
 
-        self.train_model = theano.function(inputs=[self.input,theano.Param(learning_rate, default=0.13),theano.Param(corruption_level, default=0.1)],
-            outputs=self.cost(corruption_level),
-            updates=self.get_updates(learning_rate, corruption_level),
+        self.cost=self.reconstruction_error
+        self.train_model = theano.function(inputs=[self.input,
+                                                   theano.Param(learning_rate, default=0.13)],
+            outputs=self.cost(),
+            updates=self.get_updates(learning_rate),
             givens={})
 
         self.transform = theano.function(inputs=[self.input],
             outputs=self.reconstructed,
         )
 
-    def get_corrupted_input(self, input, corruption_level):
-        return  self.theano_rng.binomial(size=input.shape, n=1,
-            p=1 - corruption_level,
-            dtype=theano.config.floatX) * input
+    def get_corrupted_input(self):
+        return  self.theano_rng.binomial(size=self.input.shape, n=1,
+            p=1 - self.corruption_level,
+            dtype=theano.config.floatX)
 
     def get_hidden_values(self, input):
         """ Computes the values of the hidden layer """
@@ -90,20 +93,18 @@ class dA(Model):
         """
         return  T.nnet.sigmoid(T.dot(hidden, self.W_prime) + self.b_prime)
 
-    def get_updates(self, learning_rate, corruption_level):
+    def get_updates(self, learning_rate):
         # compute the gradients of the cost of the `dA` with respect
         # to its parameters
-        gparams = T.grad(self.cost(corruption_level), self.params)
+        gparams = T.grad(self.cost(), self.params)
         # generate the list of updates
         updates = []
         for param, gparam in zip(self.params, gparams):
             updates.append((param, param - learning_rate * gparam))
         return updates
 
-    def cost(self, corruption_level):
-        tilde_x = self.get_corrupted_input(self.input, corruption_level)
-        y = self.get_hidden_values(tilde_x)
-        z = self.get_reconstructed_input(y)
+    def reconstruction_error(self):
+        z = self.get_reconstructed_input(self.get_hidden_values(self.get_corrupted_input()))
         # note : we sum over the size of a datapoint; if we are using
         #        minibatches, L will be a vector, with one entry per
         #        example in minibatch
@@ -115,8 +116,8 @@ class dA(Model):
         #        the minibatch
         return T.mean(L)
 
-    def train(self, data, learning_rate=.13, corruption_level=.1):
-        c = self.train_model(numpy.array(data),learning_rate=learning_rate, corruption_level=corruption_level)
+    def train(self, data, learning_rate=.13):
+        c = self.train_model(numpy.array(data),learning_rate=learning_rate)
         return c
 
 
