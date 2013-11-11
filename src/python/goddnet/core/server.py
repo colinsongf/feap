@@ -3,7 +3,7 @@ import numpy
 import os
 import cPickle
 from goddnet.core.model import SDAFeatureModel
-from goddnet.models.dA import dA
+from goddnet.models.dA import DenoisingAutoencoder
 from goddnet.models.mlp import MLP
 from goddnet.models.regression import LogisticRegression
 
@@ -13,7 +13,8 @@ class Server(object):
     def __init__(self):
 
         print '... building the model'
-        self.feature_model =dA(in_size=784, hidden_size=500)
+        numpy_rng = numpy.random.RandomState(123)
+        self.feature_model =DenoisingAutoencoder(numpy_rng, in_size=784, hidden_size=500)
         self.feature_trainer = Trainer(self.feature_model)
 
         self.predictor_trainers = dict()
