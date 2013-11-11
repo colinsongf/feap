@@ -2,9 +2,7 @@ import gzip
 import numpy
 import os
 import cPickle
-from goddnet.core.model import SDAFeatureModel
 from goddnet.models.SdA import SdA
-from goddnet.models.dA import DenoisingAutoencoder
 from goddnet.models.mlp import MLP
 from goddnet.models.regression import LogisticRegression
 
@@ -15,7 +13,8 @@ class Server(object):
 
         print '... building the model'
         numpy_rng = numpy.random.RandomState(123)
-        self.feature_model =DenoisingAutoencoder(numpy_rng, in_size=784, hidden_size=500)
+        self.feature_model = SdA(numpy_rng, in_size=784, hidden_sizes=[500,500], out_size=10)
+        self.feature_model.is_unsupervised=True
         self.feature_trainer = Trainer(self.feature_model)
 
         self.predictor_trainers = dict()
