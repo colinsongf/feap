@@ -3,7 +3,7 @@ import numpy
 import os
 import cPickle
 from goddnet.core.model import FeatureModel
-from goddnet.models.logistic import LogisticRegression
+from goddnet.models.regression import LogisticRegression
 
 
 class Server(object):
