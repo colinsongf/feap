@@ -83,10 +83,11 @@ class SdA(PredictorModel):
             givens={},
             name='train')
 
-        transform_input=T.vector('input')
-        self.transform = theano.function(inputs=[transform_input],
-            outputs=self.dA_layers[-1].get_hidden_values(transform_input),
-        )
+    def transform(self, data):
+        layer_input=data
+        for i in xrange(self.n_layers):
+            layer_input=self.dA_layers[i].transform(layer_input)
+        return layer_input
 
     def errors(self, y):
         super(SdA,self).errors(y)
