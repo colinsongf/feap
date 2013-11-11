@@ -58,7 +58,7 @@ class LogisticRegression(PredictorModel):
     """
     Multiclass logistic regression
     """
-    def __init__(self, in_size, out_size):
+    def __init__(self, in_size, out_size, input=None):
         """
         input = input examples (symbol)
         in_size = size of input
@@ -66,7 +66,10 @@ class LogisticRegression(PredictorModel):
         """
         super(LogisticRegression,self).__init__()
 
-        self.input=T.matrix('x')
+        if input is None:
+            self.input=T.matrix('x')
+        else:
+            self.input=input
         self.y = T.lvector('y')
 
         # Init weights
