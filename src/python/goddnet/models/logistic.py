@@ -56,10 +56,10 @@ class LogisticRegression(PredictorModel):
         return c
 
     def predict(self, data):
-        fn = theano.function(inputs=[],
-            outputs=T.argmax(T.nnet.softmax(T.dot(data, self.W) + self.b),axis=1),
+        fn = theano.function(inputs=[self.input],
+            outputs=self.y_pred,
             )
-        return fn()
+        return fn(data)
 
 
 class LogisticNegativeLogLikelihood(LogisticRegression):
