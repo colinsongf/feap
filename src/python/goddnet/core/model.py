@@ -154,9 +154,6 @@ class PredictorModel(Model):
             updates.append((param, param - learning_rate * gparam))
         return updates
 
-    def cost(self):
-        pass
-
     def errors(self, y):
         # check if y has same dimension of y_pred
         if y.ndim != self.y_pred.ndim:

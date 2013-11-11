@@ -38,7 +38,7 @@ class LogisticRegression(PredictorModel):
         learning_rate = T.scalar('learning_rate')  # learning rate to use
 
         self.train_model = theano.function(inputs=[self.input,self.y,theano.Param(learning_rate, default=0.13)],
-            outputs=self.cost(),
+            outputs=self.negative_log_likelihood(),
             updates=self.get_updates(learning_rate),
             givens={})
         self.predict = theano.function(inputs=[self.input],
@@ -59,7 +59,5 @@ class LogisticRegression(PredictorModel):
         c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
         return c
 
-
-class LogisticNegativeLogLikelihood(LogisticRegression):
-    def cost(self):
+    def negative_log_likelihood(self):
         return -T.mean(T.log(self.p_y_given_x)[T.arange(self.y.shape[0]), self.y])
