@@ -12,10 +12,8 @@ class Server(object):
     def __init__(self):
 
         print '... building the model'
-        numpy_rng = numpy.random.RandomState(123)
-        self.feature_model = SdA(numpy_rng, in_size=784, hidden_sizes=[500,500], out_size=10)
-        self.feature_model.is_unsupervised=True
-        self.feature_trainer = Trainer(self.feature_model)
+        self.feature_model = None
+        self.feature_trainer = None
 
         self.predictor_trainers = dict()
         self.predictor_models = dict()
@@ -23,7 +21,9 @@ class Server(object):
 
     def process_train(self, input, model_name=None, label=None):
         # Do unsuperivsed training of all inputs
-        c_u=self.feature_trainer.train(input)
+        c_u=[]
+        if self.feature_trainer is not None:
+            c_u=self.feature_trainer.train(input)
         c_s=[]
         if model_name is not None and label is not None:
             if model_name in self.predictor_trainers:
@@ -36,6 +36,11 @@ class Server(object):
             features=self.feature_model.transform(input)
             return self.predictor_models[model_name].predict(features)
         return None
+
+    def set_feature_model(self, model):
+        self.feature_model=model
+        self.feature_model.is_unsupervised=True
+        self.feature_trainer = Trainer(self.feature_model)
 
     def add_predictor(self, name, model):
         self.predictor_models[name]=model
@@ -84,9 +89,10 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     f.close()
 
     train_set_x, train_set_y = train_set
-    server=Server()
-    server.add_predictor('logistic',LogisticRegression(500, 10))
     numpy_rng = numpy.random.RandomState(123)
+    server=Server()
+    server.set_feature_model(SdA(numpy_rng, in_size=784, hidden_sizes=[500,500], out_size=10))
+    server.add_predictor('logistic',LogisticRegression(500, 10))
     server.add_predictor('mlp',MLP(numpy_rng, 500, 200, 10))
     server.add_predictor('SdA',SdA(numpy_rng, in_size=500, hidden_sizes=[250, 250], out_size=10))
     print '... pretraining model'
@@ -114,7 +120,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
         print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA cost=%.4f' % (i,numpy.mean(c_log),numpy.mean(c_mlp),numpy.mean(c_sda)))
 
 if __name__ == '__main__':
-    test_features(pretraining_epochs=15,training_epochs=15)
+    test_features(pretraining_epochs=5,training_epochs=5)
 
 
 
