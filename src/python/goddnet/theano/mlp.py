@@ -166,7 +166,7 @@ class MLP(object):
         # logistic regression layer
         self.negative_log_likelihood = self.logRegressionLayer.negative_log_likelihood
         # same holds for the function computing the number of errors
-        self.errors = self.logRegressionLayer.errors
+        self.errors = self.logRegressionLayer.errorsgma
 
         # the parameters of the model are the parameters of the two layer it is
         # made out of
