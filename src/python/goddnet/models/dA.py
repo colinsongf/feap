@@ -8,7 +8,7 @@ class dA(FeatureModel):
     """
     Denoising autoencoder
     """
-    def __init__(self, in_size, hidden_size, input=None, W=None, bhid=None, bvis=None, corruption_level=0.1):
+    def __init__(self, numpy_rng, in_size, hidden_size, theano_rng=None, input=None, W=None, bhid=None, bvis=None, corruption_level=0.1):
         super(dA,self).__init__()
         self.is_unsupervised=True
         self.in_size = in_size
@@ -16,8 +16,8 @@ class dA(FeatureModel):
         self.corruption_level=corruption_level
 
         # create a Theano random generator that gives symbolic random values
-        numpy_rng = numpy.random.RandomState(123)
-        theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+        if theano_rng is None:
+            theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
 
         # note : W' was written as `W_prime` and b' as `b_prime`
         if not W:
