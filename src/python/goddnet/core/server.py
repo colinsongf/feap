@@ -3,7 +3,7 @@ import numpy
 import os
 import cPickle
 from goddnet.core.model import FeatureModel
-from goddnet.models.logistic import LogisticRegression, LogisticNegativeLogLikelihood
+from goddnet.models.logistic import LogisticRegression
 
 
 class Server(object):
@@ -38,7 +38,7 @@ class Server(object):
 
     def add_predictor(self, name, model):
         self.predictor_models[name]=model
-        self.predictor_trainers[name]=Trainer(model, batch_size=10)
+        self.predictor_trainers[name]=Trainer(model)
 
 
 class Trainer(object):
@@ -84,7 +84,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
 
     train_set_x, train_set_y = train_set
     server=Server()
-    server.add_predictor('logistic',LogisticNegativeLogLikelihood(500, 10))
+    server.add_predictor('logistic',LogisticRegression(500, 10))
     print '... pretraining model'
     for i in xrange(pretraining_epochs):
         c=[]
@@ -94,7 +94,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
         print('... pretraining epoch %d cost=%.4f' % (i,numpy.mean(c)))
 
     print '... training model'
-    server.feature_trainer.batch_size=10
+    #server.feature_trainer.batch_size=10
     for i in xrange(training_epochs):
         c=[]
         for x,y in zip(train_set_x,train_set_y):
