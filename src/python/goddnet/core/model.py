@@ -8,10 +8,8 @@ from goddnet.theano.mlp import HiddenLayer
 
 
 class Model(object):
-
-    params=[]
     def __init__(self):
-        pass
+        self.params=[]
 
     def train(self, data, learning_rate):
         raise NotImplementedError('Use a subclass')
@@ -22,11 +20,21 @@ class Model(object):
 
 class FeatureModel(Model):
 
-    is_unsupervised=True
+    def __init__(self):
+        super(FeatureModel,self).__init__()
+        self.is_unsupervised=True
 
+    def train(self, data, learning_rate=0.001):
+        pass
+
+    def transform(self, data):
+        pass
+
+
+class SDAFeatureModel(FeatureModel):
     def __init__(self, numpy_rng, theano_rng=None, n_ins=784, hidden_layers_sizes=[500, 500], n_outs=10,
                  corruption_levels=[0.1, 0.2]):
-
+        super(FeatureModel,self).__init__()
         self.sigmoid_layers = []
         self.dA_layers = []
         self.params = []
@@ -37,10 +45,10 @@ class FeatureModel(Model):
 
         if not theano_rng:
             theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
-        # allocate symbolic variables for the data
+            # allocate symbolic variables for the data
         self.x = T.matrix('x')  # the data is presented as rasterized images
         self.y = T.ivector('y')  # the labels are presented as 1D vector of
-                                 # [int] labels
+        # [int] labels
 
         for i in xrange(self.n_layers):
             # construct the sigmoidal layer
@@ -61,10 +69,10 @@ class FeatureModel(Model):
                 layer_input = self.sigmoid_layers[-1].output
 
             sigmoid_layer = HiddenLayer(rng=numpy_rng,
-                                        input=layer_input,
-                                        n_in=input_size,
-                                        n_out=hidden_layers_sizes[i],
-                                        activation=T.nnet.sigmoid)
+                input=layer_input,
+                n_in=input_size,
+                n_out=hidden_layers_sizes[i],
+                activation=T.nnet.sigmoid)
             # add the layer to our list of layers
             self.sigmoid_layers.append(sigmoid_layer)
             # dA, but not the SdA
@@ -73,18 +81,18 @@ class FeatureModel(Model):
             # Construct a denoising autoencoder that shared weights with this
             # layer
             dA_layer = dA(numpy_rng=numpy_rng,
-                          theano_rng=theano_rng,
-                          input=layer_input,
-                          n_visible=input_size,
-                          n_hidden=hidden_layers_sizes[i],
-                          W=sigmoid_layer.W,
-                          bhid=sigmoid_layer.b)
+                theano_rng=theano_rng,
+                input=layer_input,
+                n_visible=input_size,
+                n_hidden=hidden_layers_sizes[i],
+                W=sigmoid_layer.W,
+                bhid=sigmoid_layer.b)
             self.dA_layers.append(dA_layer)
 
         # We now need to add a logistic layer on top of the MLP
         self.logLayer = LogisticRegression(
-                         input=self.sigmoid_layers[-1].output,
-                         n_in=hidden_layers_sizes[-1], n_out=n_outs)
+            input=self.sigmoid_layers[-1].output,
+            n_in=hidden_layers_sizes[-1], n_out=n_outs)
 
         self.params.extend(self.logLayer.params)
         # construct a function that implements one step of finetunining
@@ -108,14 +116,14 @@ class FeatureModel(Model):
         for dA in self.dA_layers:
             # get the cost and the updates list
             cost, updates = dA.get_cost_updates(corruption_level,
-                                                learning_rate)
+                learning_rate)
             # compile the theano function
             fn = theano.function(inputs=[self.x,
-                                    theano.Param(corruption_level, default=0.2),
-                                    theano.Param(learning_rate, default=0.1)],
-                                 outputs=cost,
-                                 updates=updates,
-                                 givens={})
+                                         theano.Param(corruption_level, default=0.2),
+                                         theano.Param(learning_rate, default=0.1)],
+                outputs=cost,
+                updates=updates,
+                givens={})
             # append `fn` to the list of functions
             pretrain_fns.append(fn)
 
@@ -126,8 +134,8 @@ class FeatureModel(Model):
         layer_c=[]
         for i in xrange(self.n_layers):
             layer_c.append(self.pretraining_fns[i](train_set_x,corruption=self.corruption_levels[i],
-                               lr=learning_rate))
-        return layer_c
+                lr=learning_rate))
+        return np.mean(layer_c)
 
     def transform(self, data):
         x=data
@@ -141,8 +149,10 @@ class FeatureModel(Model):
 
 class PredictorModel(Model):
 
-    y_pred=None
-    is_unsupervised=False
+    def __init__(self):
+        super(PredictorModel,self).__init__()
+        self.y_pred=None
+        self.is_unsupervised=False
 
     def get_updates(self, learning_rate):
         # compute the gradients of the cost of the `dA` with respect
