@@ -73,8 +73,9 @@ class dA(FeatureModel):
             updates=self.get_updates(learning_rate),
             givens={})
 
-        self.transform = theano.function(inputs=[self.input],
-            outputs=self.reconstructed,
+        transform_input=T.vector('input')
+        self.transform = theano.function(inputs=[transform_input],
+            outputs=self.get_hidden_values(transform_input),
         )
 
     def get_corrupted_input(self):
