@@ -4,6 +4,7 @@ import os
 import cPickle
 from goddnet.core.model import SDAFeatureModel
 from goddnet.models.dA import dA
+from goddnet.models.mlp import MLP
 from goddnet.models.regression import LogisticRegression
 
 
@@ -84,6 +85,8 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     train_set_x, train_set_y = train_set
     server=Server()
     server.add_predictor('logistic',LogisticRegression(500, 10))
+    numpy_rng = numpy.random.RandomState(123)
+    server.add_predictor('mlp',MLP(numpy_rng, 500, 200, 10))
     print '... pretraining model'
     for i in xrange(pretraining_epochs):
         c=[]
@@ -95,11 +98,14 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     print '... training model'
     #server.feature_trainer.batch_size=10
     for i in xrange(training_epochs):
-        c=[]
+        c_log=[]
+        c_mlp=[]
         for x,y in zip(train_set_x,train_set_y):
             c_u,c_s=server.process_train(x,model_name='logistic',label=y)
-            c.extend(c_s)
-        print('... training epoch %d cost=%.4f' % (i,numpy.mean(c)))
+            c_log.extend(c_s)
+            c_u,c_s=server.process_train(x,model_name='mlp',label=y)
+            c_mlp.extend(c_s)
+        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f' % (i,numpy.mean(c_log),numpy.mean(c_mlp)))
 
 if __name__ == '__main__':
     test_features(pretraining_epochs=5,training_epochs=5)
