@@ -97,7 +97,10 @@ class FeatureModel(Model):
         # minibatch given by self.x and self.y
         self.errors = self.logLayer.errors(self.y)
 
-    def pretraining_functions(self, train_set_x):
+        self.pretraining_fns = self.pretraining_functions()
+
+    def pretraining_functions(self):
+
         corruption_level = T.scalar('corruption')  # % of corruption to use
         learning_rate = T.scalar('lr')  # learning rate to use
 
@@ -107,23 +110,22 @@ class FeatureModel(Model):
             cost, updates = dA.get_cost_updates(corruption_level,
                                                 learning_rate)
             # compile the theano function
-            fn = theano.function(inputs=[
+            fn = theano.function(inputs=[self.x,
                                     theano.Param(corruption_level, default=0.2),
                                     theano.Param(learning_rate, default=0.1)],
                                  outputs=cost,
                                  updates=updates,
-                                 givens={self.x: train_set_x})
+                                 givens={})
             # append `fn` to the list of functions
             pretrain_fns.append(fn)
 
         return pretrain_fns
 
     def train(self, data, learning_rate=0.001):
-        train_set_x = theano.shared(numpy.asarray(data, dtype=theano.config.floatX), borrow=True)
-        pretraining_fns = self.pretraining_functions(train_set_x=train_set_x)
+        train_set_x = numpy.array(data)
         layer_c=[]
         for i in xrange(self.n_layers):
-            layer_c.append(pretraining_fns[i](corruption=self.corruption_levels[i],
+            layer_c.append(self.pretraining_fns[i](train_set_x,corruption=self.corruption_levels[i],
                                lr=learning_rate))
         return layer_c
 
