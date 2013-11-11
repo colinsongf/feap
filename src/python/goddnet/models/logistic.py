@@ -16,7 +16,7 @@ class LogisticRegression(PredictorModel):
         super(LogisticRegression,self).__init__()
 
         self.input=T.matrix('x')
-        self.y = T.ivector('y')
+        self.y = T.lvector('y')
 
         # Init weights
         self.W = theano.shared(value=numpy.zeros((in_size, out_size), dtype=theano.config.floatX),
@@ -35,6 +35,13 @@ class LogisticRegression(PredictorModel):
         # model parameters
         self.params.extend([self.W, self.b])
 
+        learning_rate = T.scalar('learning_rate')  # learning rate to use
+
+        self.train_model = theano.function(inputs=[self.input,self.y,theano.Param(learning_rate, default=0.13)],
+            outputs=self.cost(),
+            updates=self.get_updates(learning_rate),
+            givens={})
+
     def errors(self, y):
         super(LogisticRegression,self).errors(y)
 
@@ -42,17 +49,10 @@ class LogisticRegression(PredictorModel):
         if not y.dtype.startswith('int'):
             raise NotImplementedError()
 
-    def train(self, data, learning_rate=0.13):
-        train_set_x = theano.shared(numpy.asarray([x[0] for x in data], dtype=theano.config.floatX), borrow=True)
-        train_set_y = theano.shared(numpy.asarray([x[1] for x in data], dtype=theano.config.floatX), borrow=True)
-        train_set_y = T.cast(train_set_y, 'int32')
-
-        train_model = theano.function(inputs=[],
-            outputs=self.cost(),
-            updates=self.get_updates(learning_rate),
-            givens={self.input:train_set_x,
-                    self.y:train_set_y})
-        c = train_model()
+    def train(self, data, learning_rate=.13):
+        train_set_x = numpy.array([x[0] for x in data])
+        train_set_y = numpy.array([x[1] for x in data])
+        c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
         return c
 
     def predict(self, data):
