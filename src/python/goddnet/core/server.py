@@ -23,7 +23,7 @@ class Server(object):
     def process_train(self, input, model_name=None, label=None):
         # Do unsuperivsed training of all inputs
         c_u=self.feature_trainer.train(input)
-        c_s=0
+        c_s=[]
         if model_name is not None and label is not None:
             if model_name in self.predictor_trainers:
                 c_s=self.predictor_trainers[model_name].train(self.feature_model.transform(input), label=label)
@@ -59,7 +59,7 @@ class Trainer(object):
             if self.model.is_unsupervised:
                 c.extend(self.model.train([x[0] for x in self.queue]))
             else:
-                self.model.train(self.queue)
+                c.append(self.model.train(self.queue))
 
             #empty the queue
             del self.queue
