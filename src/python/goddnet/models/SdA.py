@@ -18,7 +18,7 @@ class SdA(PredictorModel):
         assert self.n_layers > 0
 
         if theano_ring is None:
-            theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+            theano_ring = RandomStreams(numpy_rng.randint(2 ** 30))
 
         self.input = T.matrix('x')  # the data is presented as rasterized images
         learning_rate = T.scalar('learning_rate')  # learning rate to use
@@ -83,13 +83,21 @@ class SdA(PredictorModel):
             givens={},
             name='train')
 
+        transform_input=T.vector('input')
+        self.transform = theano.function(inputs=[transform_input],
+            outputs=self.dA_layers[-1].get_hidden_values(transform_input),
+        )
+
     def errors(self, y):
         super(SdA,self).errors(y)
         return self.logLayer.errors(self.y)
 
     def train(self, data, learning_rate=.13):
-        train_set_x = numpy.array([x[0] for x in data])
-        train_set_y = numpy.array([x[1] for x in data])
+        if self.is_unsupervised:
+            train_set_x = numpy.array(data)
+        else:
+            train_set_x = numpy.array([x[0] for x in data])
+            train_set_y = numpy.array([x[1] for x in data])
         c_u = []
         input=train_set_x
         for i in xrange(self.n_layers):
@@ -98,5 +106,6 @@ class SdA(PredictorModel):
             for j in xrange(input.shape[0]):
                 next_input[j,:]=self.dA_layers[i].transform(input[j,:])
             input=next_input
-        c_s = self.finetune_function(train_set_x,train_set_y,learning_rate=learning_rate)
-        return c_s
+        if not self.is_unsupervised:
+            return self.finetune_function(train_set_x,train_set_y,learning_rate=learning_rate)
+        return c_u
