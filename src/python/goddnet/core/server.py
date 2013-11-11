@@ -3,6 +3,7 @@ import numpy
 import os
 import cPickle
 from goddnet.core.model import SDAFeatureModel
+from goddnet.models.SdA import SdA
 from goddnet.models.dA import DenoisingAutoencoder
 from goddnet.models.mlp import MLP
 from goddnet.models.regression import LogisticRegression
@@ -88,6 +89,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     server.add_predictor('logistic',LogisticRegression(500, 10))
     numpy_rng = numpy.random.RandomState(123)
     server.add_predictor('mlp',MLP(numpy_rng, 500, 200, 10))
+    server.add_predictor('SdA',SdA(numpy_rng, in_size=500, hidden_sizes=[250, 250], out_size=10))
     print '... pretraining model'
     for i in xrange(pretraining_epochs):
         c=[]
@@ -101,15 +103,20 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     for i in xrange(training_epochs):
         c_log=[]
         c_mlp=[]
+        c_sda=[]
         for x,y in zip(train_set_x,train_set_y):
             c_u,c_s=server.process_train(x,model_name='logistic',label=y)
             c_log.extend(c_s)
             c_u,c_s=server.process_train(x,model_name='mlp',label=y)
             c_mlp.extend(c_s)
-        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f' % (i,numpy.mean(c_log),numpy.mean(c_mlp)))
+            c_u,c_s=server.process_train(x,model_name='SdA',label=y)
+            c_sda.extend(c_s)
+
+        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA cost=%.4f' % (i,numpy.mean(c_log),numpy.mean(c_mlp),numpy.mean(c_sda)))
 
 if __name__ == '__main__':
-    test_features(pretraining_epochs=5,training_epochs=5)
+    test_features(pretraining_epochs=15,training_epochs=15)
+
 
 
 
