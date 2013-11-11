@@ -4,12 +4,12 @@ import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 from goddnet.core.model import FeatureModel
 
-class dA(FeatureModel):
+class DenoisingAutoencoder(FeatureModel):
     """
     Denoising autoencoder
     """
     def __init__(self, numpy_rng, in_size, hidden_size, theano_rng=None, input=None, W=None, bhid=None, bvis=None, corruption_level=0.1):
-        super(dA,self).__init__()
+        super(DenoisingAutoencoder,self).__init__()
         self.is_unsupervised=True
         self.in_size = in_size
         self.n_hidden = hidden_size
