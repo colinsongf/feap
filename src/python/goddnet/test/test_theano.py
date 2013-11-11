@@ -6,7 +6,7 @@ import theano as th
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from goddnet.theano.utils import matrix_power
+from goddnet.core.utils import matrix_power
 
 
 class TestTheano(unittest.TestCase):
@@ -122,6 +122,18 @@ class TestTheano(unittest.TestCase):
         diff = np.abs(A4 - Anp).sum()
         assert diff < 1e-6
 
+    def testComplex(self):
+
+        z = T.zscalar('z')
+        f = th.function([z], z*z)
+        #df = T.grad(z*z, z)
+
+        z1 = np.complex128(3.2 + -1.7j)
+        fz1 = f(z1)
+        assert np.abs(np.real(fz1) - (np.real(z1)**2 - np.imag(z1)**2)) < 1e-3
+        assert np.abs(np.imag(fz1) - (2*np.real(z1)*np.imag(z1))) < 1e-3
+
+        #dz1 = df(z1)
 
 if __name__ == '__main__':
     unittest.main()
