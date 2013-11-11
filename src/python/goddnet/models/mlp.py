@@ -84,7 +84,7 @@ class MLP(PredictorModel):
         self.input=T.matrix('x')
         self.y = T.lvector('y')
 
-        self.hidden_layer = HiddenLayer(rng=rng, input=self.input, n_in=in_size, n_out=hidden_size, activation=T.tanh)
+        self.hidden_layer = HiddenLayer(rng, self.input, in_size, hidden_size, activation=T.tanh)
 
         # The logistic regression layer gets as input the hidden units
         # of the hidden layer
@@ -116,6 +116,7 @@ class MLP(PredictorModel):
 
 
     def errors(self, y):
+        super(MLP,self).errors(y)
         return self.output_layer.errors(y)
 
     def negative_log_likelihood(self):
