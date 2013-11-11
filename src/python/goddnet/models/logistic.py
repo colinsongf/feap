@@ -41,6 +41,9 @@ class LogisticRegression(PredictorModel):
             outputs=self.cost(),
             updates=self.get_updates(learning_rate),
             givens={})
+        self.predict = theano.function(inputs=[self.input],
+            outputs=self.y_pred,
+        )
 
     def errors(self, y):
         super(LogisticRegression,self).errors(y)
@@ -54,12 +57,6 @@ class LogisticRegression(PredictorModel):
         train_set_y = numpy.array([x[1] for x in data])
         c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
         return c
-
-    def predict(self, data):
-        fn = theano.function(inputs=[self.input],
-            outputs=self.y_pred,
-            )
-        return fn(data)
 
 
 class LogisticNegativeLogLikelihood(LogisticRegression):
