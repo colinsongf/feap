@@ -3,6 +3,57 @@ import theano
 import theano.tensor as T
 from goddnet.core.model import PredictorModel
 
+class LinearRegression(PredictorModel):
+    """
+    Multivariate linear regression
+    """
+    def __init__(self, in_size, out_size):
+
+        PredictorModel.__init__(self)
+
+        self.input=T.matrix('x')
+        self.y = T.matrix('y')
+
+        # Init weights
+        self.W = theano.shared(value=numpy.zeros((in_size, out_size), dtype=theano.config.floatX), name='W', borrow=True)
+
+        # Init bias
+        self.b = theano.shared(value=numpy.zeros((out_size,), dtype=theano.config.floatX), name='b', borrow=True)
+
+        self.y_pred = self.get_activation(self.input)
+
+        # model parameters
+        self.params = [self.W, self.b]
+
+        learning_rate = T.scalar('learning_rate')  # learning rate to use
+
+        self.cost = lambda: self.negative_log_likelihood()
+        self.train_model = theano.function(inputs=[self.input,self.y,theano.Param(learning_rate, default=0.13)],
+                                           outputs=self.cost(),
+                                           updates=self.get_updates(learning_rate),
+                                           givens={})
+        self.pred_input = T.vector('pred_input')
+        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_activation(self.pred_input))
+
+    def get_activation(self, x):
+        return T.dot(x, self.W) + self.b
+
+    def errors(self, y):
+        super(LinearRegression,self).errors(y)
+        return T.mean(T.sqr(self.y_pred - y))
+
+    def train(self, data, learning_rate=.13):
+        train_set_x = numpy.array([x[0] for x in data])
+        train_set_y = numpy.array([x[1] for x in data])
+        print 'train_set_x.shape=',train_set_x.shape
+        print 'train_set_y.shape=',train_set_y.shape
+        c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
+        return c
+
+    def negative_log_likelihood(self):
+        return T.mean(T.sqr(self.y_pred - self.y))
+
+
 class LogisticRegression(PredictorModel):
     """
     Multiclass logistic regression
