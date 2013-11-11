@@ -7,7 +7,7 @@ from goddnet.core.model import LogisticRegression,Model,PredictorModel
 
 
 class HiddenLayer(object):
-    def __init__(self, rng, input, n_in, n_out, W=None, b=None,
+    def __init__(self, rng, input, in_size, out_size, W=None, b=None,
                  activation=T.tanh):
         """
         Typical hidden layer of a MLP: units are fully-connected and have
@@ -50,16 +50,16 @@ class HiddenLayer(object):
         #        tanh.
         if W is None:
             W_values = numpy.asarray(rng.uniform(
-                    low=-numpy.sqrt(6. / (n_in + n_out)),
-                    high=numpy.sqrt(6. / (n_in + n_out)),
-                    size=(n_in, n_out)), dtype=theano.config.floatX)
+                    low=-numpy.sqrt(6. / (in_size + out_size)),
+                    high=numpy.sqrt(6. / (in_size + out_size)),
+                    size=(in_size, out_size)), dtype=theano.config.floatX)
             if activation == theano.tensor.nnet.sigmoid:
                 W_values *= 4
 
             W = theano.shared(value=W_values, name='W', borrow=True)
 
         if b is None:
-            b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)
+            b_values = numpy.zeros((out_size,), dtype=theano.config.floatX)
             b = theano.shared(value=b_values, name='b', borrow=True)
 
         self.W = W
@@ -74,18 +74,21 @@ class HiddenLayer(object):
 
 class MLP(PredictorModel):
 
-    def __init__(self, rng, input, n_in, n_hidden, n_out, L1_reg=0.0, L2_reg=0.0):
+    def __init__(self, rng, in_size, hidden_size, out_size, L1_reg=0.0, L2_reg=0.0):
 
-        Model.__init__(self)
+        PredictorModel.__init__(self)
+
+        self.L1_reg=L1_reg
+        self.L2_reg=L2_reg
 
         self.input=T.matrix('x')
         self.y = T.lvector('y')
 
-        self.hidden_layer = HiddenLayer(rng=rng, input=input, n_in=n_in, n_out=n_hidden, activation=T.tanh)
+        self.hidden_layer = HiddenLayer(rng=rng, input=self.input, n_in=in_size, n_out=hidden_size, activation=T.tanh)
 
         # The logistic regression layer gets as input the hidden units
         # of the hidden layer
-        self.output_layer = LogisticRegression(input=self.hidden_layer.output, n_in=n_hidden, n_out=n_out)
+        self.output_layer = LogisticRegression(input=self.hidden_layer.output, n_in=hidden_size, n_out=out_size)
 
         # L1 norm ; one regularization option is to enforce L1 norm to
         # be small
@@ -95,18 +98,12 @@ class MLP(PredictorModel):
         # square of L2 norm to be small
         self.L2_sqr = (self.hidden_layer.W ** 2).sum() + (self.output_layer.W ** 2).sum()
 
-        # negative log likelihood of the MLP is given by the negative
-        # log likelihood of the output of the model, computed in the
-        # logistic regression layer
-        self.negative_log_likelihood = self.output_layer.negative_log_likelihood + L1_reg*self.L1 + L2_reg*self.L2_sqr
-        # same holds for the function computing the number of errors
-        self.errors = self.output_layer.errors
-
         # the parameters of the model are the parameters of the two layer it is
         # made out of
-        self.params = [self.hidden_layer.params, self.output_layer.params]
+        self.params.extend(self.hidden_layer.params)
+        self.params.extend(self.output_layer.params)
 
-        self.cost = lambda: self.negative_log_likelihood
+        self.cost = self.negative_log_likelihood
 
         learning_rate = T.scalar('learning_rate')  # learning rate to use
 
@@ -116,6 +113,16 @@ class MLP(PredictorModel):
                                            givens={})
 
         self.predict = theano.function(inputs=[self.input], outputs=self.output_layer.y_pred)
+
+
+    def errors(self, y):
+        return self.output_layer.errors(y)
+
+    def negative_log_likelihood(self):
+        # negative log likelihood of the MLP is given by the negative
+        # log likelihood of the output of the model, computed in the
+        # logistic regression layer
+        return self.output_layer.negative_log_likelihood(self.y) + self.L1_reg*self.L1 + self.L2_reg*self.L2_sqr
 
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
