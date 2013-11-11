@@ -51,6 +51,7 @@ class LogisticRegression(PredictorModel):
         # check if y is of the correct datatype
         if not y.dtype.startswith('int'):
             raise NotImplementedError()
+        return T.mean(T.neq(self.y_pred, y))
 
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
@@ -62,9 +63,3 @@ class LogisticRegression(PredictorModel):
 class LogisticNegativeLogLikelihood(LogisticRegression):
     def cost(self):
         return -T.mean(T.log(self.p_y_given_x)[T.arange(self.y.shape[0]), self.y])
-
-    def errors(self, y):
-        super(LogisticNegativeLogLikelihood,self).errors(y)
-        # the T.neq operator returns a vector of 0s and 1s, where 1
-        # represents a mistake in prediction
-        return T.mean(T.neq(self.y_pred, y))
