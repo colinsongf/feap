@@ -135,7 +135,7 @@ class SDAFeatureModel(FeatureModel):
         for i in xrange(self.n_layers):
             layer_c.append(self.pretraining_fns[i](train_set_x,corruption=self.corruption_levels[i],
                 lr=learning_rate))
-        return np.mean(layer_c)
+        return numpy.mean(layer_c)
 
     def transform(self, data):
         x=data
