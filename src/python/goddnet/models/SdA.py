@@ -93,20 +93,24 @@ class SdA(PredictorModel):
         super(SdA,self).errors(y)
         return self.logLayer.errors(self.y)
 
-    def train(self, data, learning_rate=.13):
-        if self.is_unsupervised:
-            train_set_x = numpy.array(data)
-        else:
-            train_set_x = numpy.array([x[0] for x in data])
-            train_set_y = numpy.array([x[1] for x in data])
-        c_u = []
+    def train_unsupervised(self, train_set_x, learning_rate=.13):
+        layer_cost = []
         input=train_set_x
         for i in xrange(self.n_layers):
-            c_u.append(self.pretrain_fns[i](input,learning_rate=learning_rate))
+            layer_cost.append(self.pretrain_fns[i](input,learning_rate=learning_rate))
             next_input=numpy.zeros((input.shape[0],self.dA_layers[i].hidden_size))
             for j in xrange(input.shape[0]):
                 next_input[j,:]=self.dA_layers[i].transform(input[j,:])
             input=next_input
-        if not self.is_unsupervised:
+        return numpy.mean(layer_cost)
+
+    def train(self, data, learning_rate=.13):
+        if self.is_unsupervised:
+            train_set_x = numpy.array(data)
+            return self.train_unsupervised(train_set_x, learning_rate=learning_rate)
+        else:
+            train_set_x = numpy.array([x[0] for x in data])
+            train_set_y = numpy.array([x[1] for x in data])
+            self.train_unsupervised(train_set_x, learning_rate=learning_rate)
             return self.finetune_function(train_set_x,train_set_y,learning_rate=learning_rate)
-        return c_u
+

@@ -21,14 +21,14 @@ class Server(object):
 
     def process_train(self, input, model_name=None, label=None):
         # Do unsuperivsed training of all inputs
-        c_u=[]
+        cost_feature=None
         if self.feature_trainer is not None:
-            c_u=self.feature_trainer.train(input)
-        c_s=[]
+            cost_feature=self.feature_trainer.train(input)
+        cost_predictor=None
         if model_name is not None and label is not None:
             if model_name in self.predictor_trainers:
-                c_s=self.predictor_trainers[model_name].train(self.feature_model.transform(input), label=label)
-        return c_u,c_s
+                cost_predictor=self.predictor_trainers[model_name].train(self.feature_model.transform(input), label=label)
+        return cost_feature,cost_predictor
 
 
     def process_predict(self, model_name, input):
@@ -59,18 +59,19 @@ class Trainer(object):
         #add the input to the queue
         self.queue.append( (input, label) )
 
-        c=[]
         #train the model with a mini-batch if the queue is full
         if len(self.queue) >= self.batch_size:
             if self.model.is_unsupervised:
-                c.append(self.model.train([x[0] for x in self.queue]))
+                cost=self.model.train([x[0] for x in self.queue])
             else:
-                c.append(self.model.train(self.queue))
+                cost=self.model.train(self.queue)
 
             #empty the queue
             del self.queue
             self.queue = list()
-        return c
+
+            return cost
+        return None
 
 def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data/mnist.pkl.gz'):
     # Download the MNIST dataset if it is not present
@@ -97,30 +98,42 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     server.add_predictor('SdA',SdA(numpy_rng, in_size=500, hidden_sizes=[250, 250], out_size=10))
     print '... pretraining model'
     for i in xrange(pretraining_epochs):
-        c=[]
+        batch_costs=[]
         for x in train_set_x:
-            c_u,c_s=server.process_train(x)
-            c.extend(c_u)
-        print('... pretraining epoch %d cost=%.4f' % (i,numpy.mean(c)))
+            cost_feature,cost_predictor=server.process_train(x)
+            if cost_feature is not None:
+                batch_costs.append(cost_feature)
+        print('... pretraining epoch %d cost=%.4f' % (i,numpy.mean(batch_costs)))
 
     print '... training model'
     #server.feature_trainer.batch_size=10
     for i in xrange(training_epochs):
-        c_log=[]
-        c_mlp=[]
-        c_sda=[]
+        batch_costs={'logistic':[],'mlp':[],'SdA-supervised':[],'SdA-unsupervised':[]}
         for x,y in zip(train_set_x,train_set_y):
-            c_u,c_s=server.process_train(x,model_name='logistic',label=y)
-            c_log.extend(c_s)
-            c_u,c_s=server.process_train(x,model_name='mlp',label=y)
-            c_mlp.extend(c_s)
-            c_u,c_s=server.process_train(x,model_name='SdA',label=y)
-            c_sda.extend(c_s)
+            cost_feature,cost_predictor=server.process_train(x,model_name='logistic',label=y)
+            if cost_predictor is not None:
+                batch_costs['logistic'].append(cost_predictor)
+            cost_feature,cost_predictor=server.process_train(x,model_name='mlp',label=y)
+            if cost_predictor is not None:
+                batch_costs['mlp'].append(cost_predictor)
+            cost_feature,cost_predictor=server.process_train(x,model_name='SdA',label=y)
+            if cost_feature is not None:
+                batch_costs['SdA-unsupervised'].append(cost_feature)
+            if cost_predictor is not None:
+                batch_costs['SdA-supervised'].append(cost_predictor)
 
-        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA cost=%.4f' % (i,numpy.mean(c_log),numpy.mean(c_mlp),numpy.mean(c_sda)))
+        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA-unsupervised cost=%.4f, SdA-supervised cost=%.4f' %
+              (
+                  i,
+                  numpy.mean(batch_costs['logistic']),
+                  numpy.mean(batch_costs['mlp']),
+                  numpy.mean(batch_costs['SdA-unsupervised']),
+                  numpy.mean(batch_costs['SdA-supervised'])
+              )
+            )
 
 if __name__ == '__main__':
-    test_features(pretraining_epochs=5,training_epochs=5)
+    test_features(pretraining_epochs=5,training_epochs=20)
 
 
 

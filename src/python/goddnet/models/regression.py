@@ -45,10 +45,8 @@ class LinearRegression(PredictorModel):
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
         train_set_y = numpy.array([x[1] for x in data])
-        print 'train_set_x.shape=',train_set_x.shape
-        print 'train_set_y.shape=',train_set_y.shape
-        c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
-        return c
+        cost = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
+        return cost
 
     def negative_log_likelihood(self):
         return T.mean(T.sqr(self.y_pred - self.y))
@@ -95,9 +93,14 @@ class LogisticRegression(PredictorModel):
         self.train_model = theano.function(inputs=[self.input,self.y,theano.Param(learning_rate, default=0.13)],
             outputs=self.cost(),
             updates=self.get_updates(learning_rate),
-            givens={})
+        )
         self.predict = theano.function(inputs=[self.input],
             outputs=self.y_pred,
+        )
+        # compiling a Theano function that computes the mistakes that are made by
+        # the model on a minibatch
+        self.test_model = theano.function(inputs=[self.input,self.y],
+            outputs=self.errors(self.y),
         )
 
     def errors(self, y):
@@ -111,8 +114,8 @@ class LogisticRegression(PredictorModel):
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
         train_set_y = numpy.array([x[1] for x in data])
-        c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
-        return c
+        cost = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
+        return cost
 
     def negative_log_likelihood(self):
         return -T.mean(T.log(self.p_y_given_x)[T.arange(self.y.shape[0]), self.y])

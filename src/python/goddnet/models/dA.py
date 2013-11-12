@@ -118,7 +118,7 @@ class DenoisingAutoencoder(FeatureModel):
         return T.mean(L)
 
     def train(self, data, learning_rate=.13):
-        c = self.train_model(numpy.array(data),learning_rate=learning_rate)
-        return c
+        cost = self.train_model(numpy.array(data),learning_rate=learning_rate)
+        return cost
 
 

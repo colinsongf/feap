@@ -129,7 +129,7 @@ class MLP(PredictorModel):
     def train(self, data, learning_rate=.13):
         train_set_x = numpy.array([x[0] for x in data])
         train_set_y = numpy.array([x[1] for x in data])
-        c = self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
-        return c
+        cost= self.train_model(train_set_x,train_set_y,learning_rate=learning_rate)
+        return cost
 
 
