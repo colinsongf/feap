@@ -42,7 +42,8 @@ class TestRegression(unittest.TestCase):
             print 'Training sample %d' % (k+1)
             c = trainer.train(X[:, k], Y[:, k])
             if k % trainer.batch_size == 0:
-                train_errors.extend(c)
+                if c is not None:
+                    train_errors.append(c)
                 #compute error on validation set
                 Ypred = list()
                 for m in range(nvalid):
