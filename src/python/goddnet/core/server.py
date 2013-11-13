@@ -54,7 +54,7 @@ class Trainer(object):
         self.batch_size = batch_size
         self.queue = list()
 
-    def train(self, input, label=None):
+    def train(self, input, label=None, learning_rate=.1):
 
         #add the input to the queue
         self.queue.append( (input, label) )
@@ -62,9 +62,9 @@ class Trainer(object):
         #train the model with a mini-batch if the queue is full
         if len(self.queue) >= self.batch_size:
             if self.model.is_unsupervised:
-                cost=self.model.train([x[0] for x in self.queue])
+                cost=self.model.train([x[0] for x in self.queue], learning_rate=learning_rate)
             else:
-                cost=self.model.train(self.queue)
+                cost=self.model.train(self.queue, learning_rate=learning_rate)
 
             #empty the queue
             del self.queue
@@ -108,7 +108,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
     print '... training model'
     #server.feature_trainer.batch_size=10
     for i in xrange(training_epochs):
-        batch_costs={'logistic':[],'mlp':[],'SdA-supervised':[],'SdA-unsupervised':[]}
+        batch_costs={'logistic':[],'mlp':[],'SdA':[]}
         for x,y in zip(train_set_x,train_set_y):
             cost_feature,cost_predictor=server.process_train(x,model_name='logistic',label=y)
             if cost_predictor is not None:
@@ -117,23 +117,20 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
             if cost_predictor is not None:
                 batch_costs['mlp'].append(cost_predictor)
             cost_feature,cost_predictor=server.process_train(x,model_name='SdA',label=y)
-            if cost_feature is not None:
-                batch_costs['SdA-unsupervised'].append(cost_feature)
             if cost_predictor is not None:
-                batch_costs['SdA-supervised'].append(cost_predictor)
+                batch_costs['SdA'].append(cost_predictor)
 
-        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA-unsupervised cost=%.4f, SdA-supervised cost=%.4f' %
+        print('... training epoch %d: logistic cost=%.4f, mlp cost=%.4f, SdA cost=%.4f' %
               (
                   i,
                   numpy.mean(batch_costs['logistic']),
                   numpy.mean(batch_costs['mlp']),
-                  numpy.mean(batch_costs['SdA-unsupervised']),
-                  numpy.mean(batch_costs['SdA-supervised'])
+                  numpy.mean(batch_costs['SdA'])
               )
             )
 
 if __name__ == '__main__':
-    test_features(pretraining_epochs=5,training_epochs=20)
+    test_features(pretraining_epochs=0,training_epochs=20)
 
 
 
