@@ -20,7 +20,7 @@ class LinearRegression(PredictorModel):
         # Init bias
         self.b = theano.shared(value=numpy.zeros((out_size,), dtype=theano.config.floatX), name='b', borrow=True)
 
-        self.y_pred = self.get_activation(self.input)
+        self.y_pred = self.get_prediction(self.input)
 
         # model parameters
         self.params = [self.W, self.b]
@@ -33,9 +33,9 @@ class LinearRegression(PredictorModel):
                                            updates=self.get_updates(learning_rate),
                                            givens={})
         self.pred_input = T.vector('pred_input')
-        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_activation(self.pred_input))
+        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_prediction(self.pred_input))
 
-    def get_activation(self, x):
+    def get_prediction(self, x):
         return T.dot(x, self.W) + self.b
 
     def errors(self, y):
@@ -79,10 +79,10 @@ class LogisticRegression(PredictorModel):
             name='b', borrow=True)
 
         # Class probabilities - softmax of input*weights+bias
-        self.p_y_given_x = T.nnet.softmax(T.dot(self.input, self.W) + self.b)
+        self.p_y_given_x = self.get_class_probabilities(self.input)
 
         # Class prediction - maximum probability
-        self.y_pred = T.argmax(self.p_y_given_x, axis=1)
+        self.y_pred = self.get_prediction(self.p_y_given_x)
 
         # model parameters
         self.params.extend([self.W, self.b])
@@ -96,7 +96,7 @@ class LogisticRegression(PredictorModel):
         )
         self.pred_input = T.vector('pred_input')
         self.predict = theano.function(inputs=[self.pred_input],
-            outputs=self.get_activation(self.pred_input),
+            outputs=self.get_prediction(self.get_class_probabilities(self.pred_input)),
         )
         # compiling a Theano function that computes the mistakes that are made by
         # the model on a minibatch
@@ -104,8 +104,11 @@ class LogisticRegression(PredictorModel):
             outputs=self.errors(self.y),
         )
 
-    def get_activation(self, x):
-        return T.argmax(T.nnet.softmax(T.dot(x, self.W) + self.b),axis=1)
+    def get_class_probabilities(self, x):
+        return T.nnet.softmax(T.dot(x, self.W) + self.b)
+
+    def get_prediction(self, x):
+        return T.argmax(x,axis=1)
 
     def errors(self, y):
         super(LogisticRegression,self).errors(y)
@@ -135,12 +138,12 @@ class ComplexLinearRegression(PredictorModel):
         self.y = T.zmatrix('y')
 
         # Init weights
-        self.W = theano.shared(value=np.zeros((in_size, out_size), dtype=np.complex128), name='W', borrow=True)
+        self.W = theano.shared(value=numpy.zeros((in_size, out_size), dtype=numpy.complex128), name='W', borrow=True)
 
         # Init bias
-        self.b = theano.shared(value=np.zeros((out_size,), dtype=np.complex128), name='b', borrow=True)
+        self.b = theano.shared(value=numpy.zeros((out_size,), dtype=numpy.complex128), name='b', borrow=True)
 
-        self.y_pred = self.get_activation(self.input)
+        self.y_pred = self.get_prediction(self.input)
 
         # model parameters
         self.params = [self.W, self.b]
@@ -153,9 +156,9 @@ class ComplexLinearRegression(PredictorModel):
                                            updates=self.get_updates(learning_rate),
                                            givens={})
         self.pred_input = T.vector('pred_input')
-        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_activation(self.pred_input))
+        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_prediction(self.pred_input))
 
-    def get_activation(self, x):
+    def get_prediction(self, x):
         return T.dot(x, self.W) + self.b
 
     def negative_log_likelihood(self):
