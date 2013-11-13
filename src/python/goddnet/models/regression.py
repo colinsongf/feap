@@ -94,14 +94,18 @@ class LogisticRegression(PredictorModel):
             outputs=self.cost(),
             updates=self.get_updates(learning_rate),
         )
-        self.predict = theano.function(inputs=[self.input],
-            outputs=self.y_pred,
+        self.pred_input = T.vector('pred_input')
+        self.predict = theano.function(inputs=[self.pred_input],
+            outputs=self.get_activation(self.pred_input),
         )
         # compiling a Theano function that computes the mistakes that are made by
         # the model on a minibatch
         self.test_model = theano.function(inputs=[self.input,self.y],
             outputs=self.errors(self.y),
         )
+
+    def get_activation(self, x):
+        return T.argmax(T.nnet.softmax(T.dot(x, self.W) + self.b),axis=1)
 
     def errors(self, y):
         super(LogisticRegression,self).errors(y)
