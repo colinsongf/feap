@@ -100,7 +100,7 @@ class TestTheano(unittest.TestCase):
 
     def testGrad(self):
 
-        x = T.dvector('x')
+        x = T.dvector(' x')
         y = T.exp(T.sum(x**2))
         gy = T.grad(y, x)
 
@@ -134,6 +134,25 @@ class TestTheano(unittest.TestCase):
         assert np.abs(np.imag(fz1) - (2*np.real(z1)*np.imag(z1))) < 1e-3
 
         #dz1 = df(z1)
+
+        z2 = np.complex128(3.2 + -1.7j)
+        f2 = th.function([z], T.real(z*T.conj(z)))
+        fz2 = f2(z2)
+
+        assert np.imag(fz2) == 0.0
+
+        W = T.zmatrix('W')
+        WW = np.array([[1.5-3j, 0.3+0.2j],
+                       [2.3+0.7j, -0.8+0.4j]])
+
+        z = T.zvector('z')
+        f3 = th.function([W, z], T.dot(W, z))
+
+        z3 = np.array([0.5-0.2j, 0.8-0.9j])
+        z4 = f3(WW, z3)
+
+        e = np.dot(WW, z3) - z4
+        assert np.dot(e, np.conj(e)) < 1e-6
 
 if __name__ == '__main__':
     unittest.main()
