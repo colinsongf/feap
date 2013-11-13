@@ -2,7 +2,7 @@ import numpy
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
-from goddnet.core.model import FeatureModel
+from feap.core.model import FeatureModel
 
 class DenoisingAutoencoder(FeatureModel):
     """

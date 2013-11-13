@@ -2,9 +2,9 @@ import gzip
 import numpy
 import os
 import cPickle
-from goddnet.models.SdA import SdA
-from goddnet.models.mlp import MLP
-from goddnet.models.regression import LogisticRegression
+from feap.models.SdA import SdA
+from feap.models.mlp import MLP
+from feap.models.regression import LogisticRegression
 
 
 class Server(object):

@@ -1,7 +1,7 @@
 import numpy
 import theano
 import theano.tensor as T
-from goddnet.core.model import PredictorModel
+from feap.core.model import PredictorModel
 
 class LinearRegression(PredictorModel):
     """

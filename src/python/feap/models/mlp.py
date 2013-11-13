@@ -3,8 +3,8 @@ import numpy
 import theano
 import theano.tensor as T
 
-from goddnet.core.model import PredictorModel
-from goddnet.models.regression import LogisticRegression
+from feap.core.model import PredictorModel
+from feap.models.regression import LogisticRegression
 
 
 class HiddenLayer(object):

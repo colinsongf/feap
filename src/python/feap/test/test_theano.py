@@ -6,7 +6,7 @@ import theano as th
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from goddnet.core.utils import matrix_power
+from feap.core.utils import matrix_power
 
 
 class TestTheano(unittest.TestCase):

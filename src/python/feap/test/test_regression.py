@@ -4,8 +4,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from goddnet.core.server import Trainer
-from goddnet.models.regression import LinearRegression
+from feap.core.server import Trainer
+from feap.models.regression import LinearRegression
 
 
 class TestRegression(unittest.TestCase):

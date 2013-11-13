@@ -2,10 +2,10 @@ import numpy
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
-from goddnet.core.model import PredictorModel
-from goddnet.models.dA import DenoisingAutoencoder
-from goddnet.models.mlp import HiddenLayer
-from goddnet.models.regression import LogisticRegression
+from feap.core.model import PredictorModel
+from feap.models.dA import DenoisingAutoencoder
+from feap.models.mlp import HiddenLayer
+from feap.models.regression import LogisticRegression
 
 class SdA(PredictorModel):
     def __init__(self, numpy_rng, theano_ring=None, in_size=784, hidden_sizes=[500, 500], out_size=10, corruption_levels=[0.1, 0.1]):
