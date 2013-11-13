@@ -83,11 +83,20 @@ class SdA(PredictorModel):
             givens={},
             name='train')
 
+        self.pred_input = T.vector('pred_input')
+        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_prediction(self.pred_input))
+
     def transform(self, data):
         layer_input=data
         for i in xrange(self.n_layers):
-            layer_input=self.dA_layers[i].transform(layer_input)
+            layer_input=self.sigmoid_layers[i].get_output(layer_input)
         return layer_input
+
+    def get_prediction(self, input):
+        layer_input=input
+        for i in xrange(self.n_layers):
+            layer_input=self.sigmoid_layers[i].get_output(layer_input)
+        return self.logLayer.get_prediction(self.logLayer.get_class_probabilities(layer_input))
 
     def errors(self, y):
         super(SdA,self).errors(y)
