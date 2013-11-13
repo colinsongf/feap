@@ -36,7 +36,7 @@ class HiddenLayer(object):
                            layer
         """
         self.input = input
-
+        self.activation=activation
         # `W` is initialized with `W_values` which is uniformely sampled
         # from sqrt(-6./(n_in+n_hidden)) and sqrt(6./(n_in+n_hidden))
         # for tanh activation function
@@ -66,11 +66,18 @@ class HiddenLayer(object):
         self.W = W
         self.b = b
 
-        lin_output = T.dot(input, self.W) + self.b
-        self.output = (lin_output if activation is None
-                       else activation(lin_output))
+        self.output = self.get_output(self.input)
         # parameters of the model
         self.params = [self.W, self.b]
+
+        self.pred_input = T.vector('pred_input')
+        self.predict = theano.function(inputs=[self.pred_input],
+            outputs=self.get_output(self.pred_input),
+        )
+
+    def get_output(self, input):
+        lin_output = T.dot(input, self.W) + self.b
+        return lin_output if self.activation is None else self.activation(lin_output)
 
 
 class MLP(PredictorModel):
@@ -113,8 +120,13 @@ class MLP(PredictorModel):
                                            updates=self.get_updates(learning_rate),
                                            givens={})
 
-        self.predict = theano.function(inputs=[self.input], outputs=self.output_layer.y_pred)
+        self.pred_input = T.vector('pred_input')
+        self.predict = theano.function(inputs=[self.pred_input], outputs=self.get_prediction(self.pred_input))
 
+
+    def get_prediction(self, input):
+        hidden_layer_out=self.hidden_layer.get_output(input)
+        return self.output_layer.get_prediction(self.output_layer.get_class_probabilities(hidden_layer_out))
 
     def errors(self, y):
         super(MLP,self).errors(y)
