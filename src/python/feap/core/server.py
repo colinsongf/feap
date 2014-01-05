@@ -130,7 +130,7 @@ def test_features(pretraining_epochs=15, training_epochs=15, dataset='../../data
             )
 
 if __name__ == '__main__':
-    test_features(pretraining_epochs=0,training_epochs=20)
+    test_features(pretraining_epochs=5,training_epochs=20)
 
 
 
