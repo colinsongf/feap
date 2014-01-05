@@ -8,12 +8,15 @@ from feap.models.mlp import HiddenLayer
 from feap.models.regression import LogisticRegression
 
 class SdA(PredictorModel):
-    def __init__(self, numpy_rng, theano_ring=None, in_size=784, hidden_sizes=[500, 500], out_size=10, corruption_levels=[0.1, 0.1]):
+    def __init__(self, numpy_rng, theano_ring=None, in_size=784, hidden_sizes=[500, 500], out_size=10,
+                 corruption_levels=[0.1, 0.1], unsupervised_epochs=100, unsupervised_learning_rate=.001):
         super(SdA,self).__init__()
         self.sigmoid_layers = []
         self.dA_layers = []
         self.params = []
         self.n_layers = len(hidden_sizes)
+        self.unsupervised_epochs=unsupervised_epochs
+        self.unsupervised_learning_rate=unsupervised_learning_rate
 
         assert self.n_layers > 0
 
@@ -116,7 +119,10 @@ class SdA(PredictorModel):
     def train(self, data, learning_rate=.13):
         if self.is_unsupervised:
             train_set_x = numpy.array(data)
-            return self.train_unsupervised(train_set_x, learning_rate=learning_rate)
+            cost=0
+            for i in xrange(self.unsupervised_epochs):
+                cost=self.train_unsupervised(train_set_x, learning_rate=self.unsupervised_learning_rate)
+            return cost
         else:
             train_set_x = numpy.array([x[0] for x in data])
             train_set_y = numpy.array([x[1] for x in data])
